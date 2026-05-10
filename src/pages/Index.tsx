@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -21,7 +21,12 @@ import {
 
 import AccountStatusCard from "@/components/account-status-card";
 import SupabaseActionsPanel from "@/components/supabase-actions-panel";
-import SupabaseAuthPanel, { readSession } from "@/components/supabase-auth-panel";
+import SupabaseAuthPanel, {
+  type AuthSession,
+  readSession,
+  refreshSession,
+  storeSession,
+} from "@/components/supabase-auth-panel";
 import SupabaseLivePreview from "@/components/supabase-live-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -148,8 +153,26 @@ const scrollToSection = (sectionId: string) => {
 };
 
 const Index = () => {
-  const [session, setSession] = useState(readSession());
+  const [session, setSession] = useState<AuthSession | null>(readSession());
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const storedSession = readSession();
+
+    if (!storedSession?.refresh_token) return;
+
+    if (!storedSession.expires_at) return;
+
+    refreshSession(storedSession)
+      .then((nextSession) => {
+        setSession(nextSession);
+        setRefreshKey((current) => current + 1);
+      })
+      .catch(() => {
+        storeSession(null);
+        setSession(null);
+      });
+  }, []);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
