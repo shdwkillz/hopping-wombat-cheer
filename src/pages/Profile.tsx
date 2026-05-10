@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import AppShell from "@/components/app-shell";
+import ProfileOverviewPanel from "@/components/profile-overview-panel";
 import ProfilePanel from "@/components/profile-panel";
 import SessionSync from "@/components/session-sync";
 import type { AuthSession } from "@/lib/supabase";
@@ -8,6 +9,7 @@ import { readSession, refreshSession, storeSession } from "@/lib/supabase";
 
 const Profile = () => {
   const [session, setSession] = useState<AuthSession | null>(readSession());
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const storedSession = readSession();
@@ -18,6 +20,7 @@ const Profile = () => {
     refreshSession(storedSession)
       .then((nextSession) => {
         setSession(nextSession);
+        setRefreshKey((current) => current + 1);
       })
       .catch(() => {
         storeSession(null);
@@ -27,7 +30,12 @@ const Profile = () => {
 
   return (
     <AppShell session={session}>
-      <SessionSync onSessionChange={setSession} />
+      <SessionSync
+        onSessionChange={(nextSession) => {
+          setSession(nextSession);
+          setRefreshKey((current) => current + 1);
+        }}
+      />
       <div className="space-y-6">
         <div className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary/80">Account center</p>
@@ -37,6 +45,7 @@ const Profile = () => {
           </p>
         </div>
 
+        <ProfileOverviewPanel session={session} refreshKey={refreshKey} />
         <ProfilePanel session={session} />
       </div>
     </AppShell>

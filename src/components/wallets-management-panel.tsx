@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Trash2, Wallet } from "lucide-react";
+import { CheckCircle2, Wallet } from "lucide-react";
 
 import type { AuthSession } from "@/lib/supabase";
 import { SUPABASE_URL, authenticatedFetch } from "@/lib/supabase";
+import ConfirmDeleteWalletDialog from "@/components/confirm-delete-wallet-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
 
 type WalletRecord = {
@@ -143,15 +143,11 @@ const WalletsManagementPanel = ({
                 <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">{wallet.network}</p>
               </div>
 
-              <Button
-                variant="outline"
-                onClick={() => handleDelete(wallet.id)}
+              <ConfirmDeleteWalletDialog
                 disabled={deletingId === wallet.id}
-                className="rounded-full border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {deletingId === wallet.id ? "Removing..." : "Remove"}
-              </Button>
+                walletLabel={wallet.label || wallet.network}
+                onConfirm={() => handleDelete(wallet.id)}
+              />
             </div>
           ))
         ) : (
