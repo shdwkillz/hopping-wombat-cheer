@@ -1,0 +1,245 @@
+import { FormEvent, useState } from "react";
+import { LoaderCircle, LogOut } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+type AuthSession = {
+  access_token: string;
+  refresh_token: string;
+  user: {
+    id: string;
+    email?: string;
+  };
+};
+
+type SupabaseAuthPanelProps = {
+  session: AuthSession | null;
+  onAuthenticated: (session: AuthSession) => void;
+  onSignedOut: () => void;
+};
+
+const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
+
+const STORAGE_KEY = "novaforge-rest-session";
+
+export const saveSession = (session: AuthSession) => {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+};
+
+export const readSession = () => {
+  const raw = window.localStorage.getItem(STORAGE_KEY);
+  return raw ? (JSON.parse(raw) as AuthSession) : null;
+};
+
+export const clearSession = () => {
+  window.localStorage.removeItem(STORAGE_KEY);
+};
+
+const SupabaseAuthPanel = ({
+  session,
+  onAuthenticated,
+  onSignedOut,
+}: SupabaseAuthPanelProps) => {
+  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    username: "",
+    firstName: "",
+  });
+
+  const headers = {
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    "Content-Type": "application/json",
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      if (mode === "signup") {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            email: form.email,
+            password: form.password,
+            data: {
+              username: form.username,
+              first_name: form.firstName,
+            },
+          }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.msg || result.error_description || "Unable to create account.");
+        }
+
+        setMessage("Account created. Please confirm your email, then sign in.");
+        setMode("signin");
+      } else {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            email: form.email,
+            password: form.password,
+          }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.msg || result.error_description || "Unable to sign in.");
+        }
+
+        const nextSession = {
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
+          user: result.user,
+        } satisfies AuthSession;
+
+        saveSession(nextSession);
+        onAuthenticated(nextSession);
+        setMessage("Signed in successfully.");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Authentication failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    clearSession();
+    onSignedOut();
+    setMessage("Signed out.");
+  };
+
+  if (session) {
+    return (
+      <Card className="rounded-[2rem] border-0 bg-[radial-gradient(circle_at_top_right,_rgba(124,58,237,0.22),_transparent_38%),linear-gradient(135deg,#1e1b4b,#312e81_45%,#0f172a)] text-white shadow-[0_30px_90px_rgba(49,46,129,0.32)]">
+        <CardHeader>
+          <CardTitle className="text-2xl font-black">Signed in</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4 text-sm text-white/85">
+            <p className="font-semibold">{session.user.email || "Authenticated user"}</p>
+            <p className="mt-1 break-all text-xs text-white/70">{session.user.id}</p>
+          </div>
+          <Button onClick={handleSignOut} className="h-11 w-full rounded-full bg-white text-slate-900 hover:bg-white/90">
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign out
+          </Button>
+          {message ? <p className="text-sm text-white/80">{message}</p> : null}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="rounded-[2rem] border-0 bg-[radial-gradient(circle_at_top_right,_rgba(124,58,237,0.22),_transparent_38%),linear-gradient(135deg,#1e1b4b,#312e81_45%,#0f172a)] text-white shadow-[0_30px_90px_rgba(49,46,129,0.32)]">
+      <CardHeader>
+        <CardTitle className="text-2xl font-black">Sign up or sign in</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-2 gap-2 rounded-[1rem] bg-white/10 p-1">
+            <button
+              type="button"
+              onClick={() => setMode("signup")}
+              className={`rounded-[0.875rem] px-4 py-2 text-sm font-semibold transition ${
+                mode === "signup" ? "bg-white text-slate-900" : "text-white/80"
+              }`}
+            >
+              Create account
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("signin")}
+              className={`rounded-[0.875rem] px-4 py-2 text-sm font-semibold transition ${
+                mode === "signin" ? "bg-white text-slate-900" : "text-white/80"
+              }`}
+            >
+              Sign in
+            </button>
+          </div>
+
+          {mode === "signup" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-white">
+                  First name
+                </Label>
+                <Input
+                  id="firstName"
+                  value={form.firstName}
+                  onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
+                  className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
+                  placeholder="Nova"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-white">
+                  Username
+                </Label>
+                <Input
+                  id="username"
+                  value={form.username}
+                  onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
+                  className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
+                  placeholder="novaforge"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-white">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={form.email}
+              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+              className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-white">
+              Password
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              value={form.password}
+              onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+              className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          <Button disabled={loading} className="h-12 w-full rounded-full bg-white text-slate-900 hover:bg-white/90">
+            {loading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {mode === "signup" ? "Create account" : "Access dashboard"}
+          </Button>
+          {message ? <p className="text-sm text-white/80">{message}</p> : null}
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default SupabaseAuthPanel;

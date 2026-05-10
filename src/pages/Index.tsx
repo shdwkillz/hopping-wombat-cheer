@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -19,6 +20,8 @@ import {
   Zap,
 } from "lucide-react";
 
+import SupabaseAuthPanel, { readSession } from "@/components/supabase-auth-panel";
+import SupabaseLivePreview from "@/components/supabase-live-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -138,6 +141,8 @@ const operatingPrinciples = [
 ];
 
 const Index = () => {
+  const [session, setSession] = useState(readSession());
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <section className="relative overflow-hidden">
@@ -169,7 +174,7 @@ const Index = () => {
                   A self-balancing reward ecosystem that only pays from verified revenue.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                  This production-oriented product blueprint turns your idea into a compliant, high-retention platform concept with treasury controls, anti-fraud rails, delayed crypto settlement, and AI-assisted monetization.
+                  This production-oriented product blueprint now includes live REST-based Supabase auth and data reads without relying on the missing package.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -197,42 +202,13 @@ const Index = () => {
               </div>
             </div>
 
-            <Card className="rounded-[2rem] border-0 bg-[radial-gradient(circle_at_top_right,_rgba(124,58,237,0.22),_transparent_38%),linear-gradient(135deg,#1e1b4b,#312e81_45%,#0f172a)] text-white shadow-[0_30px_90px_rgba(49,46,129,0.32)]">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <Badge className="rounded-full border-0 bg-white/15 px-3 py-1 text-white">Treasury logic</Badge>
-                  <Sparkles className="h-5 w-5 text-violet-200" />
-                </div>
-                <CardTitle className="text-2xl font-black">Daily balancing snapshot</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Verified revenue", value: "$48,240" },
-                    { label: "Safe reward pool", value: "$19,905" },
-                    { label: "Reserve coverage", value: "41 days" },
-                    { label: "Fraud risk blocked", value: "97.2%" },
-                  ].map((stat) => (
-                    <div key={stat.label} className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
-                      <p className="text-sm text-violet-100/80">{stat.label}</p>
-                      <p className="mt-2 text-2xl font-bold">{stat.value}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="rounded-[1.5rem] border border-emerald-300/20 bg-emerald-400/10 p-5">
-                  <div className="flex items-center justify-between text-sm text-emerald-100">
-                    <span>Automatic emission throttle</span>
-                    <span>72%</span>
-                  </div>
-                  <Progress value={72} className="mt-3 h-3 rounded-full bg-white/10" />
-                  <p className="mt-3 text-sm leading-6 text-emerald-50/90">
-                    Payout multipliers are lowered during soft-demand hours and re-open when revenue quality recovers.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <SupabaseAuthPanel session={session} onAuthenticated={setSession} onSignedOut={() => setSession(null)} />
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <SupabaseLivePreview session={session} />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
