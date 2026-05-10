@@ -1,6 +1,6 @@
 export const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
 export const SESSION_STORAGE_KEY = "novaforge-supabase-session";
 export const REFRESH_BUFFER_SECONDS = 60;
 
@@ -65,6 +65,10 @@ export const storeSession = (session: AuthSession | null) => {
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
 };
 
+export const clearSession = () => {
+  storeSession(null);
+};
+
 export const createAuthHeaders = (accessToken?: string) => ({
   apikey: SUPABASE_PUBLISHABLE_KEY,
   Authorization: accessToken
@@ -93,6 +97,7 @@ export const refreshSession = async (session: AuthSession) => {
   const result = await response.json();
 
   if (!response.ok || !result.access_token || !result.user?.id) {
+    clearSession();
     throw new Error(result.error_description || result.message || "Unable to refresh session.");
   }
 
@@ -108,4 +113,39 @@ export const refreshSession = async (session: AuthSession) => {
 
   storeSession(nextSession);
   return nextSession;
+};
+
+export const getValidSession = async () => {
+  const session = readSession();
+
+  if (!session) return null;
+  if (!isSessionExpired(session)) return session;
+
+  return refreshSession(session);
+};
+
+export const authenticatedFetch = async (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => {
+  const session = await getValidSession();
+  const accessToken = session?.access_token;
+
+  const headers = new Headers(init?.headers || {});
+  headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
+  headers.set(
+    "Authorization",
+    accessToken ? `Bearer ${accessToken}` : `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+  );
+
+  const response = await fetch(input, {
+    ...init,
+    headers,
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    clearSession();
+  }
+
+  return response;
 };

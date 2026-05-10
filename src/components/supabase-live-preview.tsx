@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Coins, Shield, Wallet, Zap } from "lucide-react";
 
 import type { AuthSession } from "@/lib/supabase";
-import { SUPABASE_URL, createAuthHeaders } from "@/lib/supabase";
+import { SUPABASE_URL, authenticatedFetch } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -64,24 +64,17 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const authHeaders = useMemo(
-    () => createAuthHeaders(session?.access_token),
-    [session],
-  );
-
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError(null);
 
       const publicRequests = await Promise.all([
-        fetch(
+        authenticatedFetch(
           `${SUPABASE_URL}/rest/v1/reward_tasks?select=id,title,description,task_type,reward_points,estimated_revenue_cents&is_active=eq.true&order=created_at.asc`,
-          { headers: authHeaders },
         ),
-        fetch(
+        authenticatedFetch(
           `${SUPABASE_URL}/rest/v1/treasury_snapshots?select=snapshot_date,verified_revenue_cents,reward_pool_cents,liquidity_reserve_cents,emergency_reserve_cents,payout_rate&order=snapshot_date.desc&limit=1`,
-          { headers: authHeaders },
         ),
       ]);
 
@@ -96,13 +89,11 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
 
       if (session) {
         const privateRequests = await Promise.all([
-          fetch(
+          authenticatedFetch(
             `${SUPABASE_URL}/rest/v1/wallets?select=id,network,address,is_verified&user_id=eq.${session.user.id}&order=created_at.desc`,
-            { headers: authHeaders },
           ),
-          fetch(
+          authenticatedFetch(
             `${SUPABASE_URL}/rest/v1/withdrawal_requests?select=id,network,amount_points,status,risk_score&user_id=eq.${session.user.id}&order=requested_at.desc`,
-            { headers: authHeaders },
           ),
         ]);
 
@@ -126,7 +117,7 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
       setError(loadError instanceof Error ? loadError.message : "Unable to load live data.");
       setLoading(false);
     });
-  }, [authHeaders, refreshKey, session]);
+  }, [refreshKey, session]);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
@@ -289,7 +280,7 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
             </div>
             <div className="mt-2 flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-300" />
-              This keeps live data visible without depending on the missing package.
+              Requests now automatically respect stored session validity.
             </div>
           </div>
         </CardContent>

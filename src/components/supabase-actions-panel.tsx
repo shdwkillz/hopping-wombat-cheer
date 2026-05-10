@@ -1,8 +1,8 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { ArrowDownToLine, Wallet } from "lucide-react";
 
 import type { AuthSession } from "@/lib/supabase";
-import { SUPABASE_URL, createJsonHeaders } from "@/lib/supabase";
+import { SUPABASE_URL, authenticatedFetch, createJsonHeaders } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,22 +43,16 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
   const [withdrawalLoading, setWithdrawalLoading] = useState(false);
   const [walletsLoading, setWalletsLoading] = useState(false);
 
-  const headers = useMemo(
-    () => (session ? createJsonHeaders(session.access_token) : null),
-    [session],
-  );
-
   useEffect(() => {
-    if (!session || !headers) {
+    if (!session) {
       setWallets([]);
       return;
     }
 
     setWalletsLoading(true);
 
-    fetch(
+    authenticatedFetch(
       `${SUPABASE_URL}/rest/v1/wallets?select=id,network,address,is_verified,label&user_id=eq.${session.user.id}&order=created_at.desc`,
-      { headers },
     )
       .then(async (response) => {
         const result = await response.json();
@@ -83,7 +77,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
       .finally(() => {
         setWalletsLoading(false);
       });
-  }, [headers, session, withdrawalForm.walletId]);
+  }, [session, withdrawalForm.walletId]);
 
   if (!session) {
     return (
@@ -106,13 +100,11 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
   const handleWalletSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!headers) return;
-
     setWalletLoading(true);
 
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/wallets`, {
+    const response = await authenticatedFetch(`${SUPABASE_URL}/rest/v1/wallets`, {
       method: "POST",
-      headers,
+      headers: createJsonHeaders(),
       body: JSON.stringify({
         user_id: session.user.id,
         network: walletForm.network,
@@ -154,8 +146,6 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
   const handleWithdrawalSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!headers) return;
-
     const amount = Number(withdrawalForm.amountPoints);
 
     if (!withdrawalForm.walletId || Number.isNaN(amount) || amount < 1) {
@@ -165,9 +155,9 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
 
     setWithdrawalLoading(true);
 
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/withdrawal_requests`, {
+    const response = await authenticatedFetch(`${SUPABASE_URL}/rest/v1/withdrawal_requests`, {
       method: "POST",
-      headers,
+      headers: createJsonHeaders(),
       body: JSON.stringify({
         user_id: session.user.id,
         wallet_id: withdrawalForm.walletId,
