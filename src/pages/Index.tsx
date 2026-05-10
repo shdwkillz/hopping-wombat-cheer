@@ -20,6 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 
+import AccountStatusCard from "@/components/account-status-card";
 import SupabaseActionsPanel from "@/components/supabase-actions-panel";
 import SupabaseAuthPanel, { readSession } from "@/components/supabase-auth-panel";
 import SupabaseLivePreview from "@/components/supabase-live-preview";
@@ -217,6 +218,10 @@ const Index = () => {
             />
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+        <AccountStatusCard session={session} />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
