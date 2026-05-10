@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { LoaderCircle, LogOut, ShieldCheck, Sparkles } from "lucide-react";
 
 import {
@@ -45,10 +45,41 @@ const SupabaseAuthPanel = ({
     storeSession(session);
   }, [session]);
 
+  const emailHint = useMemo(() => {
+    if (!form.email) return null;
+    return /\S+@\S+\.\S+/.test(form.email) ? null : "Enter a valid email address.";
+  }, [form.email]);
+
+  const passwordHint = useMemo(() => {
+    if (!form.password) return null;
+    if (mode === "signup" && form.password.length < 6) {
+      return "Use at least 6 characters for your password.";
+    }
+    return null;
+  }, [form.password, mode]);
+
+  const usernameHint = useMemo(() => {
+    if (mode !== "signup" || !form.username) return null;
+    return form.username.trim().length < 3 ? "Username should be at least 3 characters." : null;
+  }, [form.username, mode]);
+
+  const firstNameHint = useMemo(() => {
+    if (mode !== "signup" || !form.firstName) return null;
+    return form.firstName.trim().length < 2 ? "First name should be at least 2 characters." : null;
+  }, [form.firstName, mode]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setMessage(null);
+
+    if (emailHint || passwordHint || usernameHint || firstNameHint) {
+      const errorMessage = "Please fix the highlighted fields before continuing.";
+      setMessage(errorMessage);
+      showError(errorMessage);
+      setLoading(false);
+      return;
+    }
 
     if (mode === "signup") {
       if (!form.firstName.trim() || !form.username.trim()) {
@@ -85,7 +116,7 @@ const SupabaseAuthPanel = ({
         return;
       }
 
-      const successMessage = "Account created. Please confirm your email, then sign in.";
+      const successMessage = "Account created. Check your email for the confirmation link, then sign in.";
       setMessage(successMessage);
       showSuccess(successMessage);
       setMode("signin");
@@ -128,7 +159,7 @@ const SupabaseAuthPanel = ({
     storeSession(nextSession);
     onAuthenticated(nextSession);
 
-    const successMessage = "Signed in successfully.";
+    const successMessage = "Signed in successfully. Your dashboard is ready.";
     setMessage(successMessage);
     showSuccess(successMessage);
     setLoading(false);
@@ -246,6 +277,7 @@ const SupabaseAuthPanel = ({
                   placeholder="Nova"
                   required={mode === "signup"}
                 />
+                {firstNameHint ? <p className="text-xs text-amber-200">{firstNameHint}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-white">
@@ -259,6 +291,7 @@ const SupabaseAuthPanel = ({
                   placeholder="novaforge"
                   required={mode === "signup"}
                 />
+                {usernameHint ? <p className="text-xs text-amber-200">{usernameHint}</p> : null}
               </div>
             </div>
           ) : null}
@@ -276,6 +309,7 @@ const SupabaseAuthPanel = ({
               placeholder="you@example.com"
               required
             />
+            {emailHint ? <p className="text-xs text-amber-200">{emailHint}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="password" className="text-white">
@@ -291,6 +325,15 @@ const SupabaseAuthPanel = ({
               placeholder="••••••••"
               required
             />
+            {passwordHint ? (
+              <p className="text-xs text-amber-200">{passwordHint}</p>
+            ) : (
+              <p className="text-xs text-white/60">
+                {mode === "signup"
+                  ? "Use at least 6 characters."
+                  : "Enter the password linked to your account."}
+              </p>
+            )}
           </div>
           <Button disabled={loading} className="h-12 w-full rounded-full bg-white text-slate-900 hover:bg-white/90">
             {loading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}

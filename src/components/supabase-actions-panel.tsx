@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, Wallet } from "lucide-react";
 
 import type { AuthSession } from "@/lib/supabase";
@@ -79,6 +79,23 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
       });
   }, [session, withdrawalForm.walletId]);
 
+  const walletAddressHint = useMemo(() => {
+    if (!walletForm.address) return "Paste the payout address for this network.";
+    return walletForm.address.trim().length < 8 ? "Wallet address looks too short." : null;
+  }, [walletForm.address]);
+
+  const walletNetworkHint = useMemo(() => {
+    if (!walletForm.network) return "Choose the payout network.";
+    return walletForm.network.trim().length < 3 ? "Network name looks too short." : null;
+  }, [walletForm.network]);
+
+  const withdrawalAmountHint = useMemo(() => {
+    if (!withdrawalForm.amountPoints) return "Enter how many points you want to convert.";
+    const amount = Number(withdrawalForm.amountPoints);
+    if (Number.isNaN(amount) || amount < 1) return "Enter a valid amount greater than 0.";
+    return null;
+  }, [withdrawalForm.amountPoints]);
+
   if (!session) {
     return (
       <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
@@ -99,6 +116,11 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
 
   const handleWalletSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (walletAddressHint || walletNetworkHint) {
+      showError("Please review your wallet details before saving.");
+      return;
+    }
 
     setWalletLoading(true);
 
@@ -148,7 +170,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
 
     const amount = Number(withdrawalForm.amountPoints);
 
-    if (!withdrawalForm.walletId || Number.isNaN(amount) || amount < 1) {
+    if (!withdrawalForm.walletId || withdrawalAmountHint || Number.isNaN(amount) || amount < 1) {
       showError("Choose a wallet and enter a valid amount.");
       return;
     }
@@ -212,6 +234,9 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
                 placeholder="polygon"
                 required
               />
+              <p className={`text-xs ${walletNetworkHint ? "text-amber-600" : "text-slate-500"}`}>
+                {walletNetworkHint || "Examples: polygon, solana, litecoin, usdc."}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="address" className="text-slate-900">
@@ -225,6 +250,9 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
                 placeholder="0x123..."
                 required
               />
+              <p className={`text-xs ${walletAddressHint && walletForm.address ? "text-amber-600" : "text-slate-500"}`}>
+                {walletAddressHint}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="label" className="text-slate-900">
@@ -237,6 +265,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
                 className="h-11 rounded-2xl"
                 placeholder="Main wallet"
               />
+              <p className="text-xs text-slate-500">Optional name to help you recognize this wallet later.</p>
             </div>
             <Button disabled={walletLoading} className="h-12 w-full rounded-full">
               {walletLoading ? "Saving..." : "Link wallet"}
@@ -303,6 +332,9 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
                   );
                 })}
               </div>
+              {!walletsLoading && !wallets.length ? (
+                <p className="text-xs text-amber-200">Add a wallet first to unlock withdrawal requests.</p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -317,6 +349,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
                 placeholder="polygon"
                 required
               />
+              <p className="text-xs text-slate-400">This follows the selected wallet but can still be adjusted if needed.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="amountPoints" className="text-white">
@@ -332,6 +365,9 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
                 placeholder="2500"
                 required
               />
+              <p className={`text-xs ${withdrawalAmountHint && withdrawalForm.amountPoints ? "text-amber-200" : "text-slate-400"}`}>
+                {withdrawalAmountHint || "Only whole, positive point amounts can be requested."}
+              </p>
             </div>
             <Button disabled={withdrawalLoading || !wallets.length} className="h-12 w-full rounded-full bg-white text-slate-900 hover:bg-white/90">
               {withdrawalLoading ? "Submitting..." : "Request withdrawal"}

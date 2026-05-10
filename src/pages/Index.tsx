@@ -23,6 +23,7 @@ import type { AuthSession } from "@/lib/supabase";
 import { readSession, refreshSession, storeSession } from "@/lib/supabase";
 import AccountStatusCard from "@/components/account-status-card";
 import AppShell from "@/components/app-shell";
+import HomePersonalizedHero from "@/components/home-personalized-hero";
 import SessionSync from "@/components/session-sync";
 import SupabaseActionsPanel from "@/components/supabase-actions-panel";
 import SupabaseAuthPanel from "@/components/supabase-auth-panel";
@@ -182,6 +183,8 @@ const Index = () => {
       />
 
       <div className="space-y-6">
+        {session ? <HomePersonalizedHero session={session} /> : null}
+
         <section className="relative overflow-hidden">
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
             <div className="space-y-6">
