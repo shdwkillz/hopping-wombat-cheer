@@ -24,6 +24,7 @@ import { readSession, refreshSession, storeSession } from "@/lib/supabase";
 import AccountStatusCard from "@/components/account-status-card";
 import AppShell from "@/components/app-shell";
 import HomePersonalizedHero from "@/components/home-personalized-hero";
+import RecentActivityPanel from "@/components/recent-activity-panel";
 import SessionSync from "@/components/session-sync";
 import SupabaseActionsPanel from "@/components/supabase-actions-panel";
 import SupabaseAuthPanel from "@/components/supabase-auth-panel";
@@ -247,6 +248,10 @@ const Index = () => {
 
         <section>
           <AccountStatusCard session={session} />
+        </section>
+
+        <section>
+          <RecentActivityPanel session={session} refreshKey={refreshKey} />
         </section>
 
         <section>
