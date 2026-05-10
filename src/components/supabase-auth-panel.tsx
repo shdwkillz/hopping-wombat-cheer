@@ -1,25 +1,65 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { LoaderCircle, LogOut, ShieldCheck, Sparkles } from "lucide-react";
-import type { Session } from "@supabase/supabase-js";
 
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showError, showSuccess } from "@/utils/toast";
 
+type AuthSession = {
+  access_token: string;
+  refresh_token: string;
+  user: {
+    id: string;
+    email?: string;
+  };
+};
+
 type SupabaseAuthPanelProps = {
-  session: Session | null;
-  onAuthenticated: (session: Session) => void;
+  session: AuthSession | null;
+  onAuthenticated: (session: AuthSession) => void;
   onSignedOut: () => void;
 };
+
+const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
+const SESSION_STORAGE_KEY = "novaforge-supabase-session";
 
 const authBenefits = [
   "View your private wallet and withdrawal records",
   "Link payout wallets to your account dashboard",
   "Submit withdrawal requests from authenticated mode",
 ];
+
+const readStoredSession = () => {
+  if (typeof window === "undefined") return null;
+
+  const rawValue = window.localStorage.getItem(SESSION_STORAGE_KEY);
+
+  if (!rawValue) return null;
+
+  try {
+    return JSON.parse(rawValue) as AuthSession;
+  } catch {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return null;
+  }
+};
+
+export const readSession = () => readStoredSession();
+
+const storeSession = (session: AuthSession | null) => {
+  if (typeof window === "undefined") return;
+
+  if (!session) {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+};
 
 const SupabaseAuthPanel = ({
   session,
@@ -36,25 +76,37 @@ const SupabaseAuthPanel = ({
     firstName: "",
   });
 
+  useEffect(() => {
+    if (!session) return;
+    storeSession(session);
+  }, [session]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setMessage(null);
 
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
           data: {
             username: form.username,
             first_name: form.firstName,
           },
-        },
+        }),
       });
 
-      if (error) {
-        const errorMessage = error.message || "Unable to create account.";
+      const result = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = result.msg || result.error_description || result.message || "Unable to create account.";
         setMessage(errorMessage);
         showError(errorMessage);
         setLoading(false);
@@ -69,20 +121,39 @@ const SupabaseAuthPanel = ({
       return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: form.email,
+        password: form.password,
+      }),
     });
 
-    if (error || !data.session) {
-      const errorMessage = error?.message || "Unable to sign in.";
+    const result = await response.json();
+
+    if (!response.ok || !result.access_token || !result.user?.id) {
+      const errorMessage = result.error_description || result.message || "Unable to sign in.";
       setMessage(errorMessage);
       showError(errorMessage);
       setLoading(false);
       return;
     }
 
-    onAuthenticated(data.session);
+    const nextSession: AuthSession = {
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+      },
+    };
+
+    storeSession(nextSession);
+    onAuthenticated(nextSession);
 
     const successMessage = "Signed in successfully.";
     setMessage(successMessage);
@@ -91,15 +162,18 @@ const SupabaseAuthPanel = ({
   };
 
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      const errorMessage = error.message || "Unable to sign out.";
-      setMessage(errorMessage);
-      showError(errorMessage);
-      return;
+    if (session?.access_token) {
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
+    storeSession(null);
     onSignedOut();
     const successMessage = "Signed out.";
     setMessage(successMessage);

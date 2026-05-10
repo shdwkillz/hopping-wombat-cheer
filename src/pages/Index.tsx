@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
+import { useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -20,14 +19,13 @@ import {
   Zap,
 } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
 import AccountStatusCard from "@/components/account-status-card";
 import SupabaseActionsPanel from "@/components/supabase-actions-panel";
-import SupabaseAuthPanel from "@/components/supabase-auth-panel";
+import SupabaseAuthPanel, { readSession } from "@/components/supabase-auth-panel";
 import SupabaseLivePreview from "@/components/supabase-live-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -150,23 +148,8 @@ const scrollToSection = (sectionId: string) => {
 };
 
 const Index = () => {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState(readSession());
   const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-    });
-
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setRefreshKey((current) => current + 1);
-    });
-
-    return () => {
-      data.subscription.unsubscribe();
-    };
-  }, []);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -292,12 +275,10 @@ const Index = () => {
           <TabsContent value="architecture">
             <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
               <Card className="rounded-[2rem] border-0 bg-slate-900 text-white shadow-[0_25px_80px_rgba(15,23,42,0.22)]">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-2xl font-black">
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex items-center gap-3 text-2xl font-black">
                     <Gauge className="h-6 w-6 text-cyan-300" /> Full architecture
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                  </div>
                   {serviceStacks.map((stack) => (
                     <div key={stack.name} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
                       <p className="text-base font-bold">{stack.name}</p>
@@ -315,12 +296,10 @@ const Index = () => {
               </Card>
 
               <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-                <CardHeader>
-                  <CardTitle className="text-2xl font-black text-slate-900">Database schema + API surface</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+                <CardContent className="grid gap-6 p-6 xl:grid-cols-[0.9fr_1.1fr]">
                   <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/70">Schema clusters</p>
+                    <p className="text-2xl font-black text-slate-900">Database schema + API surface</p>
+                    <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-primary/70">Schema clusters</p>
                     <div className="mt-4 space-y-3">
                       {schemaTables.map((table) => (
                         <div key={table} className="rounded-[1.25rem] bg-slate-50 p-4 text-sm leading-6 text-slate-600">
@@ -330,7 +309,7 @@ const Index = () => {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/70">Core endpoints</p>
+                    <p className="mt-11 text-sm font-semibold uppercase tracking-[0.2em] text-primary/70 xl:mt-14">Core endpoints</p>
                     <div className="mt-4 space-y-3">
                       {apiGroups.map((group) => (
                         <div key={group.title} className="rounded-[1.25rem] border border-slate-200 p-4">
@@ -352,12 +331,10 @@ const Index = () => {
           <TabsContent value="economics">
             <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
               <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+                <CardContent className="space-y-5 p-6">
+                  <div className="flex items-center gap-3 text-2xl font-black text-slate-900">
                     <TrendingUp className="h-6 w-6 text-emerald-500" /> Revenue flow + treasury system
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-5">
+                  </div>
                   <div className="rounded-[1.5rem] bg-emerald-50 p-5 text-sm leading-7 text-emerald-950">
                     Verified revenue enters a single treasury ledger, platform costs are deducted, reserve buckets are filled, and only then is a capped reward pool minted for the next payout epoch.
                   </div>
@@ -378,12 +355,10 @@ const Index = () => {
               </Card>
 
               <Card className="rounded-[2rem] border-0 bg-slate-900 text-white shadow-[0_25px_80px_rgba(15,23,42,0.22)]">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-2xl font-black">
+                <CardContent className="space-y-5 p-6 text-sm leading-7 text-slate-300">
+                  <div className="flex items-center gap-3 text-2xl font-black text-white">
                     <Zap className="h-6 w-6 text-amber-300" /> Reward balancing logic
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-5 text-sm leading-7 text-slate-300">
+                  </div>
                   <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
                     Available Reward Pool = Verified Revenue − Ops Costs − Reserve Allocation
                   </div>
@@ -404,12 +379,10 @@ const Index = () => {
           <TabsContent value="security">
             <div id="risk-controls" className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
               <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex items-center gap-3 text-2xl font-black text-slate-900">
                     <Shield className="h-6 w-6 text-rose-500" /> Fraud prevention logic
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                  </div>
                   {protectionLayers.map((layer, index) => (
                     <div key={layer} className="flex gap-4 rounded-[1.5rem] bg-slate-50 p-4">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary font-bold text-primary-foreground">
@@ -423,12 +396,10 @@ const Index = () => {
 
               <div className="space-y-5">
                 <Card className="rounded-[2rem] border-0 bg-[linear-gradient(180deg,#fff7ed,#ffffff)] shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+                  <CardContent className="space-y-3 p-6 text-sm leading-7 text-slate-600">
+                    <div className="flex items-center gap-3 text-2xl font-black text-slate-900">
                       <Wallet className="h-6 w-6 text-orange-500" /> Crypto payout flow
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm leading-7 text-slate-600">
+                    </div>
                     <p>1. User earns off-chain points from verified engagement.</p>
                     <p>2. Treasury converts eligible balances into a delayed withdrawal quote.</p>
                     <p>3. Risk engine checks wallet duplication, AML flags, velocity, and reserve pressure.</p>
@@ -436,12 +407,10 @@ const Index = () => {
                   </CardContent>
                 </Card>
                 <Card className="rounded-[2rem] border-0 bg-[linear-gradient(180deg,#eef2ff,#ffffff)] shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+                  <CardContent className="space-y-3 p-6 text-sm leading-7 text-slate-600">
+                    <div className="flex items-center gap-3 text-2xl font-black text-slate-900">
                       <Lock className="h-6 w-6 text-violet-500" /> Security implementation
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm leading-7 text-slate-600">
+                    </div>
                     <p>JWT auth, refresh token rotation, encrypted secrets, immutable audits, RBAC, WAF, and DDoS mitigation are baseline controls.</p>
                     <p>High-risk actions require stronger auth context, signed admin actions, and dual-control treasury approvals.</p>
                   </CardContent>
@@ -453,12 +422,10 @@ const Index = () => {
           <TabsContent value="delivery">
             <div className="grid gap-5 lg:grid-cols-3">
               <Card className="rounded-[2rem] border-0 bg-slate-900 text-white shadow-[0_25px_80px_rgba(15,23,42,0.22)] lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-2xl font-black">
+                <CardContent className="grid gap-4 p-6 md:grid-cols-2">
+                  <div className="md:col-span-2 flex items-center gap-3 text-2xl font-black">
                     <Bot className="h-6 w-6 text-cyan-300" /> AI systems + backend services
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4 md:grid-cols-2">
+                  </div>
                   {aiSystems.map((system) => (
                     <div key={system.title} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
                       <p className="text-lg font-bold text-white">{system.title}</p>
@@ -469,12 +436,10 @@ const Index = () => {
               </Card>
 
               <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+                <CardContent className="space-y-3 p-6 text-sm leading-7 text-slate-600">
+                  <div className="flex items-center gap-3 text-2xl font-black text-slate-900">
                     <Radar className="h-6 w-6 text-pink-500" /> DevOps + monitoring
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm leading-7 text-slate-600">
+                  </div>
                   <p>Dockerized services run behind Cloudflare on autoscaling clusters, with CDN caching, isolated queues, and regional failover.</p>
                   <p>Prometheus tracks latency, queue depth, and reserve ratios while Grafana, PostHog, and ClickHouse surface fraud and retention trends.</p>
                   <p>Cost control comes from off-chain settlement batching, ad mediation optimization, cold-storage treasury segregation, and intelligent scaling windows.</p>
@@ -488,12 +453,10 @@ const Index = () => {
       <section className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
         <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
           <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+            <CardContent className="space-y-4 p-6 text-sm leading-7 text-slate-600">
+              <div className="flex items-center gap-3 text-2xl font-black text-slate-900">
                 <Trophy className="h-6 w-6 text-fuchsia-500" /> Frontend structure + retention engine
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm leading-7 text-slate-600">
+              </div>
               <p>The user experience is organized around Home, Tasks, Mining Lab, Clans, Marketplace, Wallet, and Trust Center screens.</p>
               <p>Retention loops include daily streaks, upgradeable virtual rigs, clans, seasonal ladders, prestige tracks, events, passes, and cosmetic drops.</p>
               <p>Admin surfaces focus on treasury health, fraud queues, revenue cohorts, sponsor campaigns, and withdrawal reviews to minimize manual work.</p>
@@ -501,12 +464,10 @@ const Index = () => {
           </Card>
 
           <Card className="rounded-[2rem] border-0 bg-[linear-gradient(180deg,#f5f3ff,#ffffff)] shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+            <CardContent className="space-y-4 p-6 text-sm leading-7 text-slate-700">
+              <div className="flex items-center gap-3 text-2xl font-black text-slate-900">
                 <Brain className="h-6 w-6 text-violet-500" /> Sustainability + risk analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm leading-7 text-slate-700">
+              </div>
               <p>The model remains sustainable only if verified revenue quality, reserve coverage, fraud suppression, and withdrawal conversion stay within forecast ranges.</p>
               <Separator />
               <ul className="space-y-2">
