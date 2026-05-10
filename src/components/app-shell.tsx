@@ -2,7 +2,7 @@ import { Coins, LayoutDashboard, LogIn, UserCircle2, Wallet } from "lucide-react
 import { Link, useLocation } from "react-router-dom";
 
 import type { AuthSession } from "@/lib/supabase";
-import { Badge } from "@/components/ui/badge";
+import AccountMenu from "@/components/account-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -62,9 +62,7 @@ const AppShell = ({ session, children }: AppShellProps) => {
               </nav>
 
               {session ? (
-                <Badge className="rounded-full border-0 bg-emerald-100 px-4 py-2 text-emerald-700">
-                  {session.user.email || "Signed in"}
-                </Badge>
+                <AccountMenu session={session} />
               ) : (
                 <Button asChild className="rounded-full">
                   <Link to="/login">
