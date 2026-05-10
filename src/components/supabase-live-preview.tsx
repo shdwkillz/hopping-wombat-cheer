@@ -73,6 +73,7 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
   const [wallets, setWallets] = useState<WalletRecord[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const authHeaders = useMemo(
     () => ({
@@ -84,6 +85,7 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true);
       setError(null);
 
       const publicRequests = await Promise.all([
@@ -130,10 +132,13 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
         setWallets([]);
         setWithdrawals([]);
       }
+
+      setLoading(false);
     };
 
     load().catch((loadError) => {
       setError(loadError instanceof Error ? loadError.message : "Unable to load live data.");
+      setLoading(false);
     });
   }, [authHeaders, refreshKey, session]);
 
@@ -154,13 +159,13 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
             <div className="rounded-[1.25rem] bg-slate-50 p-4">
               <p className="text-sm text-slate-500">Verified revenue</p>
               <p className="mt-2 text-2xl font-bold text-slate-900">
-                {treasury ? currency(treasury.verified_revenue_cents) : "—"}
+                {loading ? "Loading..." : treasury ? currency(treasury.verified_revenue_cents) : "—"}
               </p>
             </div>
             <div className="rounded-[1.25rem] bg-slate-50 p-4">
               <p className="text-sm text-slate-500">Reward pool</p>
               <p className="mt-2 text-2xl font-bold text-slate-900">
-                {treasury ? currency(treasury.reward_pool_cents) : "—"}
+                {loading ? "Loading..." : treasury ? currency(treasury.reward_pool_cents) : "—"}
               </p>
             </div>
           </div>
@@ -168,21 +173,29 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
           <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5">
             <div className="flex items-center justify-between text-sm text-emerald-900">
               <span>Payout rate</span>
-              <span>{treasury ? `${Math.round(treasury.payout_rate * 100)}%` : "—"}</span>
+              <span>{loading ? "Loading..." : treasury ? `${Math.round(treasury.payout_rate * 100)}%` : "—"}</span>
             </div>
-            <Progress value={treasury ? Math.round(treasury.payout_rate * 100) : 0} className="mt-3 h-3 rounded-full" />
+            <Progress value={loading ? 0 : treasury ? Math.round(treasury.payout_rate * 100) : 0} className="mt-3 h-3 rounded-full" />
           </div>
 
           <div className="space-y-3">
-            {tasks.slice(0, 4).map((task) => (
-              <div key={task.id} className="rounded-[1.25rem] bg-slate-50 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-slate-900">{task.title}</p>
-                  <Badge className="rounded-full border-0 bg-primary/10 px-3 py-1 text-primary">{task.reward_points} pts</Badge>
+            {loading ? (
+              <div className="rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-500">Loading live tasks…</div>
+            ) : tasks.length ? (
+              tasks.slice(0, 4).map((task) => (
+                <div key={task.id} className="rounded-[1.25rem] bg-slate-50 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-slate-900">{task.title}</p>
+                    <Badge className="rounded-full border-0 bg-primary/10 px-3 py-1 text-primary">{task.reward_points} pts</Badge>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{task.description}</p>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{task.description}</p>
+              ))
+            ) : (
+              <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                No active tasks are available yet.
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
@@ -197,11 +210,11 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
               <p className="text-sm text-slate-300">Wallets</p>
-              <p className="mt-2 text-2xl font-bold">{wallets.length}</p>
+              <p className="mt-2 text-2xl font-bold">{loading ? "..." : wallets.length}</p>
             </div>
             <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
               <p className="text-sm text-slate-300">Withdrawals</p>
-              <p className="mt-2 text-2xl font-bold">{withdrawals.length}</p>
+              <p className="mt-2 text-2xl font-bold">{loading ? "..." : withdrawals.length}</p>
             </div>
           </div>
 
@@ -211,7 +224,13 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
             </div>
           ) : null}
 
-          {session && wallets.length ? (
+          {session && loading ? (
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+              Loading your private account data…
+            </div>
+          ) : null}
+
+          {session && !loading && wallets.length ? (
             <div className="space-y-3">
               {wallets.map((wallet) => (
                 <div key={wallet.id} className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4">
@@ -232,6 +251,12 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
             </div>
           ) : null}
 
+          {session && !loading && !wallets.length ? (
+            <div className="rounded-[1.5rem] border border-dashed border-white/15 bg-white/5 p-4 text-sm text-slate-300">
+              No linked wallets yet.
+            </div>
+          ) : null}
+
           {session ? (
             <div className="overflow-hidden rounded-[1.5rem] border border-white/10">
               <Table>
@@ -244,7 +269,13 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {withdrawals.length ? (
+                  {loading ? (
+                    <TableRow className="border-white/10">
+                      <TableCell colSpan={4} className="text-center text-slate-300">
+                        Loading records...
+                      </TableCell>
+                    </TableRow>
+                  ) : withdrawals.length ? (
                     withdrawals.map((withdrawal) => (
                       <TableRow key={withdrawal.id} className="border-white/10">
                         <TableCell className="capitalize text-white">{withdrawal.network}</TableCell>
@@ -272,7 +303,7 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
             </div>
             <div className="mt-2 flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-300" />
-              This avoids the missing package while keeping live data visible.
+              This keeps live data visible without depending on the missing package.
             </div>
           </div>
         </CardContent>
