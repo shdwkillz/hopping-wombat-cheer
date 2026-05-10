@@ -2,7 +2,7 @@ import { ChevronDown, LogOut, Settings, UserCircle2, Wallet } from "lucide-react
 import { Link, useNavigate } from "react-router-dom";
 
 import type { AuthSession } from "@/lib/supabase";
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, storeSession } from "@/lib/supabase";
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, clearSession } from "@/lib/supabase";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,7 @@ const AccountMenu = ({ session }: AccountMenuProps) => {
       });
     }
 
-    storeSession(null);
+    clearSession();
     showSuccess("Signed out.");
     navigate("/login", { replace: true });
   };

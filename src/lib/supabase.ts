@@ -2,6 +2,7 @@ export const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
 export const SESSION_STORAGE_KEY = "novaforge-supabase-session";
+export const SESSION_EVENT_KEY = "novaforge-supabase-session-event";
 export const REFRESH_BUFFER_SECONDS = 60;
 
 export type AuthSession = {
@@ -54,15 +55,29 @@ export const readSession = () => {
   }
 };
 
+const broadcastSessionEvent = (type: "updated" | "cleared") => {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(
+    SESSION_EVENT_KEY,
+    JSON.stringify({
+      type,
+      timestamp: Date.now(),
+    }),
+  );
+};
+
 export const storeSession = (session: AuthSession | null) => {
   if (typeof window === "undefined") return;
 
   if (!session) {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    broadcastSessionEvent("cleared");
     return;
   }
 
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  broadcastSessionEvent("updated");
 };
 
 export const clearSession = () => {
@@ -124,10 +139,7 @@ export const getValidSession = async () => {
   return refreshSession(session);
 };
 
-export const authenticatedFetch = async (
-  input: RequestInfo | URL,
-  init?: RequestInit,
-) => {
+export const authenticatedFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const session = await getValidSession();
   const accessToken = session?.access_token;
 

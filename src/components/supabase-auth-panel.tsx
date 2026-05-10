@@ -5,6 +5,7 @@ import {
   type AuthSession,
   SUPABASE_PUBLISHABLE_KEY,
   SUPABASE_URL,
+  clearSession,
   storeSession,
 } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -116,10 +117,15 @@ const SupabaseAuthPanel = ({
         return;
       }
 
-      const successMessage = "Account created. Check your email for the confirmation link, then sign in.";
+      const successMessage =
+        "Account created. If email confirmation is enabled, check your inbox before signing in.";
       setMessage(successMessage);
       showSuccess(successMessage);
       setMode("signin");
+      setForm((current) => ({
+        ...current,
+        password: "",
+      }));
       setLoading(false);
       return;
     }
@@ -177,7 +183,7 @@ const SupabaseAuthPanel = ({
       });
     }
 
-    storeSession(null);
+    clearSession();
     onSignedOut();
     const successMessage = "Signed out.";
     setMessage(successMessage);
