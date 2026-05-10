@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showError, showSuccess } from "@/utils/toast";
@@ -109,10 +109,13 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
       <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
         <CardHeader>
           <CardTitle className="text-2xl font-black text-slate-900">Account actions</CardTitle>
+          <CardDescription className="text-base leading-7 text-slate-600">
+            Sign in to connect a wallet and submit a withdrawal request from your personal dashboard.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-6 text-slate-600">
-            Sign in first to link a wallet and request a withdrawal.
+            You are currently browsing in guest mode. Once signed in, you can link a payout wallet, review your saved addresses, and send withdrawal requests.
           </div>
         </CardContent>
       </Card>
@@ -216,6 +219,9 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
           <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
             <Wallet className="h-6 w-6 text-primary" /> Link wallet
           </CardTitle>
+          <CardDescription className="text-base leading-7 text-slate-600">
+            Add the wallet address where you want future payouts to be sent.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="rounded-[1.5rem] bg-slate-50 p-4 text-sm text-slate-600">
@@ -273,6 +279,9 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
           <CardTitle className="flex items-center gap-3 text-2xl font-black">
             <ArrowDownToLine className="h-6 w-6 text-cyan-300" /> Request withdrawal
           </CardTitle>
+          <CardDescription className="text-base leading-7 text-slate-300">
+            Choose a linked wallet and submit the number of points you want to convert.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
@@ -280,7 +289,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
               ? "Loading your wallets..."
               : wallets.length
                 ? "Choose one of your linked wallets below."
-                : "Link a wallet first, then request a withdrawal."}
+                : "You do not have any linked wallets yet. Add one on the left to continue."}
           </div>
 
           <form className="space-y-4" onSubmit={handleWithdrawalSubmit}>
