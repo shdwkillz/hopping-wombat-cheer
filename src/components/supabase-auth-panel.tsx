@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { LoaderCircle, LogOut } from "lucide-react";
+import { LoaderCircle, LogOut, ShieldCheck, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,7 @@ type SupabaseAuthPanelProps = {
 
 const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
 
 const STORAGE_KEY = "novaforge-rest-session";
 
@@ -40,6 +40,12 @@ export const readSession = () => {
 export const clearSession = () => {
   window.localStorage.removeItem(STORAGE_KEY);
 };
+
+const authBenefits = [
+  "View your private wallet and withdrawal records",
+  "Link payout wallets to your account dashboard",
+  "Submit withdrawal requests from authenticated mode",
+];
 
 const SupabaseAuthPanel = ({
   session,
@@ -138,14 +144,27 @@ const SupabaseAuthPanel = ({
   if (session) {
     return (
       <Card className="rounded-[2rem] border-0 bg-[radial-gradient(circle_at_top_right,_rgba(124,58,237,0.22),_transparent_38%),linear-gradient(135deg,#1e1b4b,#312e81_45%,#0f172a)] text-white shadow-[0_30px_90px_rgba(49,46,129,0.32)]">
-        <CardHeader>
-          <CardTitle className="text-2xl font-black">Signed in</CardTitle>
+        <CardHeader className="space-y-4">
+          <div className="inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
+            <ShieldCheck className="h-4 w-4" />
+            Authenticated session
+          </div>
+          <CardTitle className="text-2xl font-black">You’re signed in and ready to manage rewards.</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4 text-sm text-white/85">
             <p className="font-semibold">{session.user.email || "Authenticated user"}</p>
             <p className="mt-1 break-all text-xs text-white/70">{session.user.id}</p>
           </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            {authBenefits.map((benefit) => (
+              <div key={benefit} className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/80">
+                {benefit}
+              </div>
+            ))}
+          </div>
+
           <Button onClick={handleSignOut} className="h-11 w-full rounded-full bg-white text-slate-900 hover:bg-white/90">
             <LogOut className="mr-2 h-4 w-4" />
             Sign out
@@ -158,10 +177,27 @@ const SupabaseAuthPanel = ({
 
   return (
     <Card className="rounded-[2rem] border-0 bg-[radial-gradient(circle_at_top_right,_rgba(124,58,237,0.22),_transparent_38%),linear-gradient(135deg,#1e1b4b,#312e81_45%,#0f172a)] text-white shadow-[0_30px_90px_rgba(49,46,129,0.32)]">
-      <CardHeader>
-        <CardTitle className="text-2xl font-black">Sign up or sign in</CardTitle>
+      <CardHeader className="space-y-4">
+        <div className="inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
+          <Sparkles className="h-4 w-4" />
+          Secure account access
+        </div>
+        <div className="space-y-2">
+          <CardTitle className="text-2xl font-black">Create an account or sign in.</CardTitle>
+          <p className="text-sm leading-6 text-white/75">
+            Use your account to unlock private wallet details, live withdrawal records, and authenticated dashboard actions.
+          </p>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-5">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {authBenefits.map((benefit) => (
+            <div key={benefit} className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/80">
+              {benefit}
+            </div>
+          ))}
+        </div>
+
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-2 rounded-[1rem] bg-white/10 p-1">
             <button
