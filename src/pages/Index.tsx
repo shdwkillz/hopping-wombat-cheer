@@ -12,7 +12,6 @@ import {
   Lock,
   Radar,
   Shield,
-  Sparkles,
   Target,
   TrendingUp,
   Trophy,
@@ -27,7 +26,6 @@ import SupabaseLivePreview from "@/components/supabase-live-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -142,6 +140,13 @@ const operatingPrinciples = [
   "Emergency controls automatically throttle emissions when revenue quality or liquidity coverage falls.",
 ];
 
+const scrollToSection = (sectionId: string) => {
+  const element = document.getElementById(sectionId);
+  if (element) {
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+};
+
 const Index = () => {
   const [session, setSession] = useState(readSession());
   const [refreshKey, setRefreshKey] = useState(0);
@@ -177,15 +182,22 @@ const Index = () => {
                   A self-balancing reward ecosystem that only pays from verified revenue.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                  This production-oriented product blueprint now includes live REST-based Supabase auth, reads, and simple account actions without relying on the missing package.
+                  Explore the platform concept, connect an account, preview live Supabase data, and test wallet-linked actions from a single polished dashboard.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button className="h-12 rounded-full bg-primary px-6 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90">
+                <Button
+                  onClick={() => scrollToSection("platform-blueprint")}
+                  className="h-12 rounded-full bg-primary px-6 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90"
+                >
                   Explore system blueprint
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                <Button variant="outline" className="h-12 rounded-full border-primary/20 bg-white/80 px-6 text-base font-semibold text-primary hover:bg-primary/5">
+                <Button
+                  variant="outline"
+                  onClick={() => scrollToSection("risk-controls")}
+                  className="h-12 rounded-full border-primary/20 bg-white/80 px-6 text-base font-semibold text-primary hover:bg-primary/5"
+                >
                   Review risk controls
                 </Button>
               </div>
@@ -251,7 +263,7 @@ const Index = () => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <section id="platform-blueprint" className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <Tabs defaultValue="architecture" className="space-y-6">
           <TabsList className="grid h-auto w-full grid-cols-2 rounded-[1.5rem] bg-slate-200/70 p-2 md:grid-cols-4">
             <TabsTrigger value="architecture" className="rounded-[1rem] py-3 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-primary">Architecture</TabsTrigger>
@@ -373,7 +385,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="security">
-            <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+            <div id="risk-controls" className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
               <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
@@ -383,7 +395,7 @@ const Index = () => {
                 <CardContent className="space-y-4">
                   {protectionLayers.map((layer, index) => (
                     <div key={layer} className="flex gap-4 rounded-[1.5rem] bg-slate-50 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary font-bold text-primary-foreground">
                         {index + 1}
                       </div>
                       <p className="text-sm leading-6 text-slate-600">{layer}</p>
