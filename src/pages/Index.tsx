@@ -19,14 +19,11 @@ import {
   Zap,
 } from "lucide-react";
 
+import type { AuthSession } from "@/lib/supabase";
+import { readSession, refreshSession, storeSession } from "@/lib/supabase";
 import AccountStatusCard from "@/components/account-status-card";
 import SupabaseActionsPanel from "@/components/supabase-actions-panel";
-import SupabaseAuthPanel, {
-  type AuthSession,
-  readSession,
-  refreshSession,
-  storeSession,
-} from "@/components/supabase-auth-panel";
+import SupabaseAuthPanel from "@/components/supabase-auth-panel";
 import SupabaseLivePreview from "@/components/supabase-live-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -1,16 +1,8 @@
 import { CheckCircle2, ShieldAlert, UserRound, Wifi } from "lucide-react";
 
+import type { AuthSession } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-
-type AuthSession = {
-  access_token: string;
-  refresh_token: string;
-  user: {
-    id: string;
-    email?: string;
-  };
-};
 
 type AccountStatusCardProps = {
   session: AuthSession | null;

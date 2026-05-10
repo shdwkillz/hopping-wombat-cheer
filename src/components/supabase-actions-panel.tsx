@@ -1,20 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, Wallet } from "lucide-react";
 
+import type { AuthSession } from "@/lib/supabase";
+import { SUPABASE_URL, createJsonHeaders } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showError, showSuccess } from "@/utils/toast";
-
-type AuthSession = {
-  access_token: string;
-  refresh_token: string;
-  user: {
-    id: string;
-    email?: string;
-  };
-};
 
 type WalletRecord = {
   id: string;
@@ -28,10 +21,6 @@ type SupabaseActionsPanelProps = {
   session: AuthSession | null;
   onUpdated: () => void;
 };
-
-const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
 
 const shortenAddress = (value: string) => {
   if (value.length < 14) return value;
@@ -55,15 +44,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
   const [walletsLoading, setWalletsLoading] = useState(false);
 
   const headers = useMemo(
-    () =>
-      session
-        ? {
-            apikey: SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-            Prefer: "return=representation",
-          }
-        : null,
+    () => (session ? createJsonHeaders(session.access_token) : null),
     [session],
   );
 

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, Coins, Shield, Wallet, Zap } from "lucide-react";
 
+import type { AuthSession } from "@/lib/supabase";
+import { SUPABASE_URL, createAuthHeaders } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -12,15 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-type AuthSession = {
-  access_token: string;
-  refresh_token: string;
-  user: {
-    id: string;
-    email?: string;
-  };
-};
 
 type Task = {
   id: string;
@@ -60,10 +53,6 @@ type SupabaseLivePreviewProps = {
   refreshKey: number;
 };
 
-const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
-
 const currency = (cents: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 
@@ -76,10 +65,7 @@ const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) 
   const [loading, setLoading] = useState(true);
 
   const authHeaders = useMemo(
-    () => ({
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: session ? `Bearer ${session.access_token}` : `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-    }),
+    () => createAuthHeaders(session?.access_token),
     [session],
   );
 
