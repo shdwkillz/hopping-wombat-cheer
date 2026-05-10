@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { showError, showSuccess } from "@/utils/toast";
 
 type AuthSession = {
   access_token: string;
@@ -23,7 +24,7 @@ type SupabaseAuthPanelProps = {
 
 const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
 
 const STORAGE_KEY = "novaforge-rest-session";
 
@@ -85,7 +86,9 @@ const SupabaseAuthPanel = ({
           throw new Error(result.msg || result.error_description || "Unable to create account.");
         }
 
-        setMessage("Account created. Please confirm your email, then sign in.");
+        const successMessage = "Account created. Please confirm your email, then sign in.";
+        setMessage(successMessage);
+        showSuccess(successMessage);
         setMode("signin");
       } else {
         const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -110,10 +113,15 @@ const SupabaseAuthPanel = ({
 
         saveSession(nextSession);
         onAuthenticated(nextSession);
-        setMessage("Signed in successfully.");
+
+        const successMessage = "Signed in successfully.";
+        setMessage(successMessage);
+        showSuccess(successMessage);
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Authentication failed.");
+      const errorMessage = error instanceof Error ? error.message : "Authentication failed.";
+      setMessage(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -122,7 +130,9 @@ const SupabaseAuthPanel = ({
   const handleSignOut = () => {
     clearSession();
     onSignedOut();
-    setMessage("Signed out.");
+    const successMessage = "Signed out.";
+    setMessage(successMessage);
+    showSuccess(successMessage);
   };
 
   if (session) {
