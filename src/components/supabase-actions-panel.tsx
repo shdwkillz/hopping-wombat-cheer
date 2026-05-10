@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,14 @@ type AuthSession = {
   };
 };
 
+type WalletRecord = {
+  id: string;
+  network: string;
+  address: string;
+  is_verified: boolean;
+  label?: string | null;
+};
+
 type SupabaseActionsPanelProps = {
   session: AuthSession | null;
   onUpdated: () => void;
@@ -25,7 +33,13 @@ const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
 
+const shortenAddress = (value: string) => {
+  if (value.length < 14) return value;
+  return `${value.slice(0, 6)}...${value.slice(-4)}`;
+};
+
 const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps) => {
+  const [wallets, setWallets] = useState<WalletRecord[]>([]);
   const [walletForm, setWalletForm] = useState({
     network: "polygon",
     address: "",
@@ -38,6 +52,57 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
   });
   const [walletLoading, setWalletLoading] = useState(false);
   const [withdrawalLoading, setWithdrawalLoading] = useState(false);
+  const [walletsLoading, setWalletsLoading] = useState(false);
+
+  const headers = useMemo(
+    () =>
+      session
+        ? {
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
+          }
+        : null,
+    [session],
+  );
+
+  useEffect(() => {
+    if (!session || !headers) {
+      setWallets([]);
+      return;
+    }
+
+    setWalletsLoading(true);
+
+    fetch(
+      `${SUPABASE_URL}/rest/v1/wallets?select=id,network,address,is_verified,label&user_id=eq.${session.user.id}&order=created_at.desc`,
+      { headers },
+    )
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || "Could not load wallets.");
+        }
+
+        const nextWallets = result as WalletRecord[];
+        setWallets(nextWallets);
+
+        if (nextWallets.length && !withdrawalForm.walletId) {
+          setWithdrawalForm((current) => ({
+            ...current,
+            walletId: nextWallets[0].id,
+            network: nextWallets[0].network,
+          }));
+        }
+      })
+      .catch((error) => {
+        showError(error instanceof Error ? error.message : "Could not load wallets.");
+      })
+      .finally(() => {
+        setWalletsLoading(false);
+      });
+  }, [headers, session, withdrawalForm.walletId]);
 
   if (!session) {
     return (
@@ -46,7 +111,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
           <CardTitle className="text-2xl font-black text-slate-900">Account actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+          <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-6 text-slate-600">
             Sign in first to link a wallet and request a withdrawal.
           </div>
         </CardContent>
@@ -54,15 +119,11 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
     );
   }
 
-  const headers = {
-    apikey: SUPABASE_PUBLISHABLE_KEY,
-    Authorization: `Bearer ${session.access_token}`,
-    "Content-Type": "application/json",
-    Prefer: "return=representation",
-  };
-
   const handleWalletSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!headers) return;
+
     setWalletLoading(true);
 
     const response = await fetch(`${SUPABASE_URL}/rest/v1/wallets`, {
@@ -84,18 +145,23 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
       return;
     }
 
+    const createdWallet = result[0] as WalletRecord | undefined;
+
     setWalletForm({
       network: walletForm.network,
       address: "",
       label: "",
     });
-    if (result[0]?.id) {
+
+    if (createdWallet?.id) {
+      setWallets((current) => [createdWallet, ...current]);
       setWithdrawalForm((current) => ({
         ...current,
-        walletId: result[0].id,
-        network: result[0].network || current.network,
+        walletId: createdWallet.id,
+        network: createdWallet.network || current.network,
       }));
     }
+
     showSuccess("Wallet linked.");
     setWalletLoading(false);
     onUpdated();
@@ -103,9 +169,17 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
 
   const handleWithdrawalSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setWithdrawalLoading(true);
+
+    if (!headers) return;
 
     const amount = Number(withdrawalForm.amountPoints);
+
+    if (!withdrawalForm.walletId || Number.isNaN(amount) || amount < 1) {
+      showError("Choose a wallet and enter a valid amount.");
+      return;
+    }
+
+    setWithdrawalLoading(true);
 
     const response = await fetch(`${SUPABASE_URL}/rest/v1/withdrawal_requests`, {
       method: "POST",
@@ -143,7 +217,11 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
             <Wallet className="h-6 w-6 text-primary" /> Link wallet
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-5">
+          <div className="rounded-[1.5rem] bg-slate-50 p-4 text-sm text-slate-600">
+            Signed in as <span className="font-semibold text-slate-900">{session.user.email || "authenticated user"}</span>
+          </div>
+
           <form className="space-y-4" onSubmit={handleWalletSubmit}>
             <div className="space-y-2">
               <Label htmlFor="network" className="text-slate-900">
@@ -196,21 +274,57 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
             <ArrowDownToLine className="h-6 w-6 text-cyan-300" /> Request withdrawal
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-5">
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+            {walletsLoading
+              ? "Loading your wallets..."
+              : wallets.length
+                ? "Choose one of your linked wallets below."
+                : "Link a wallet first, then request a withdrawal."}
+          </div>
+
           <form className="space-y-4" onSubmit={handleWithdrawalSubmit}>
             <div className="space-y-2">
-              <Label htmlFor="walletId" className="text-white">
-                Wallet ID
-              </Label>
-              <Input
-                id="walletId"
-                value={withdrawalForm.walletId}
-                onChange={(event) => setWithdrawalForm((current) => ({ ...current, walletId: event.target.value }))}
-                className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
-                placeholder="Paste linked wallet ID"
-                required
-              />
+              <Label className="text-white">Choose wallet</Label>
+              <div className="grid gap-3">
+                {wallets.map((wallet) => {
+                  const selected = withdrawalForm.walletId === wallet.id;
+
+                  return (
+                    <button
+                      key={wallet.id}
+                      type="button"
+                      onClick={() =>
+                        setWithdrawalForm((current) => ({
+                          ...current,
+                          walletId: wallet.id,
+                          network: wallet.network,
+                        }))
+                      }
+                      className={`rounded-[1.25rem] border p-4 text-left transition ${
+                        selected
+                          ? "border-cyan-300 bg-cyan-300/10"
+                          : "border-white/10 bg-white/5 hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold capitalize text-white">
+                            {wallet.label || wallet.network}
+                          </p>
+                          <p className="text-xs text-slate-300">{shortenAddress(wallet.address)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{wallet.network}</p>
+                          <p className="mt-1 text-[11px] text-slate-400">{wallet.is_verified ? "Verified" : "Pending"}</p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="withdrawalNetwork" className="text-white">
                 Network
@@ -239,7 +353,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
                 required
               />
             </div>
-            <Button disabled={withdrawalLoading} className="h-12 w-full rounded-full bg-white text-slate-900 hover:bg-white/90">
+            <Button disabled={withdrawalLoading || !wallets.length} className="h-12 w-full rounded-full bg-white text-slate-900 hover:bg-white/90">
               {withdrawalLoading ? "Submitting..." : "Request withdrawal"}
             </Button>
           </form>
