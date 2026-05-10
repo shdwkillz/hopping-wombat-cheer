@@ -192,14 +192,14 @@ const Index = () => {
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
             <div className="space-y-6">
               <Badge className="rounded-full border-0 bg-primary/10 px-4 py-1.5 text-primary">
-                Sustainable rewards, not speculative payouts
+                Launch-ready public preview
               </Badge>
               <div className="space-y-4">
                 <h1 className="max-w-4xl text-4xl font-black tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-                  A self-balancing reward ecosystem that only pays from verified revenue.
+                  Explore a polished rewards dashboard with secure accounts, live previews, and wallet-linked actions.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                  Explore the platform concept, connect an account, preview live Supabase data, and test wallet-linked actions from a single polished dashboard.
+                  NovaForge Loop gives new visitors a fast product walkthrough while signed-in members can manage wallets, profile settings, and withdrawal requests in one clean experience.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -207,7 +207,7 @@ const Index = () => {
                   onClick={() => scrollToSection("platform-blueprint")}
                   className="h-12 rounded-full bg-primary px-6 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90"
                 >
-                  Explore system blueprint
+                  Explore the product
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button
@@ -215,14 +215,14 @@ const Index = () => {
                   onClick={() => scrollToSection("risk-controls")}
                   className="h-12 rounded-full border-primary/20 bg-white/80 px-6 text-base font-semibold text-primary hover:bg-primary/5"
                 >
-                  Review risk controls
+                  Review trust and safety
                 </Button>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
-                  { label: "Reward cap", value: "<= net revenue" },
-                  { label: "Treasury reserve floor", value: "35% protected" },
-                  { label: "Withdrawal model", value: "Delayed + risk scored" },
+                  { label: "Public access", value: "Live preview" },
+                  { label: "Private tools", value: "Wallets + profile" },
+                  { label: "Member actions", value: "Protected routes" },
                 ].map((item) => (
                   <Card key={item.label} className="rounded-[1.75rem] border-0 bg-slate-900 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
                     <CardContent className="p-5">
