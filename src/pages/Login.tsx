@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Coins } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
+import SessionSync from "@/components/session-sync";
 import SupabaseAuthPanel from "@/components/supabase-auth-panel";
 import type { AuthSession } from "@/lib/supabase";
 import { readSession } from "@/lib/supabase";
@@ -21,6 +22,8 @@ const Login = () => {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SessionSync onSessionChange={setSession} />
+
       <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-center justify-between gap-4">
           <Link

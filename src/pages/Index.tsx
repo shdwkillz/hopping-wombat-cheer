@@ -22,6 +22,7 @@ import {
 import type { AuthSession } from "@/lib/supabase";
 import { readSession, refreshSession, storeSession } from "@/lib/supabase";
 import AccountStatusCard from "@/components/account-status-card";
+import SessionSync from "@/components/session-sync";
 import SupabaseActionsPanel from "@/components/supabase-actions-panel";
 import SupabaseAuthPanel from "@/components/supabase-auth-panel";
 import SupabaseLivePreview from "@/components/supabase-live-preview";
@@ -157,7 +158,6 @@ const Index = () => {
     const storedSession = readSession();
 
     if (!storedSession?.refresh_token) return;
-
     if (!storedSession.expires_at) return;
 
     refreshSession(storedSession)
@@ -173,6 +173,13 @@ const Index = () => {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SessionSync
+        onSessionChange={(nextSession) => {
+          setSession(nextSession);
+          setRefreshKey((current) => current + 1);
+        }}
+      />
+
       <section className="relative overflow-hidden">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 pb-12 pt-6 sm:px-6 lg:px-8 lg:pb-20 lg:pt-10">
           <div className="flex flex-col gap-4 rounded-[2rem] border border-white/50 bg-white/70 p-4 shadow-[0_20px_80px_rgba(51,65,85,0.12)] backdrop-blur md:flex-row md:items-center md:justify-between md:p-5">
