@@ -1,6 +1,6 @@
 export const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
 export const SESSION_STORAGE_KEY = "novaforge-supabase-session";
 export const REFRESH_BUFFER_SECONDS = 60;
 

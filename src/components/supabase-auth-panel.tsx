@@ -51,6 +51,14 @@ const SupabaseAuthPanel = ({
     setMessage(null);
 
     if (mode === "signup") {
+      if (!form.firstName.trim() || !form.username.trim()) {
+        const errorMessage = "First name and username are required.";
+        setMessage(errorMessage);
+        showError(errorMessage);
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: "POST",
         headers: {
@@ -58,11 +66,11 @@ const SupabaseAuthPanel = ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: form.email,
+          email: form.email.trim(),
           password: form.password,
           data: {
-            username: form.username,
-            first_name: form.firstName,
+            username: form.username.trim(),
+            first_name: form.firstName.trim(),
           },
         }),
       });
@@ -92,7 +100,7 @@ const SupabaseAuthPanel = ({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: form.email,
+        email: form.email.trim(),
         password: form.password,
       }),
     });
@@ -236,6 +244,7 @@ const SupabaseAuthPanel = ({
                   onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
                   className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
                   placeholder="Nova"
+                  required={mode === "signup"}
                 />
               </div>
               <div className="space-y-2">
@@ -248,6 +257,7 @@ const SupabaseAuthPanel = ({
                   onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
                   className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
                   placeholder="novaforge"
+                  required={mode === "signup"}
                 />
               </div>
             </div>
@@ -274,6 +284,7 @@ const SupabaseAuthPanel = ({
             <Input
               id="password"
               type="password"
+              minLength={6}
               value={form.password}
               onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
               className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
