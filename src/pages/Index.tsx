@@ -1,755 +1,319 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
+  Activity,
   ArrowRight,
   Bot,
   Brain,
-  CheckCircle2,
   Coins,
   Crown,
+  Gauge,
   Gift,
-  LoaderCircle,
-  LogOut,
+  Globe,
+  Lock,
+  Radar,
   Shield,
   Sparkles,
   Target,
   TrendingUp,
+  Trophy,
   Wallet,
   Zap,
 } from "lucide-react";
-import { AuthError, Session } from "@supabase/supabase-js";
 
-import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 
-const NETWORKS = ["polygon", "solana", "litecoin", "usdc"] as const;
+const monetizationStreams = [
+  {
+    title: "Rewarded ads + mediation",
+    detail: "AI routes inventory to the highest quality placements and only unlocks value after verified completion.",
+    icon: Target,
+  },
+  {
+    title: "Offerwalls + partners",
+    detail: "Tasks, surveys, trials, and affiliate events contribute audited revenue into the shared reward pool.",
+    icon: Gift,
+  },
+  {
+    title: "Premium loops",
+    detail: "Battle passes, cosmetics, sponsored tournaments, and marketplace fees create margin beyond ad demand.",
+    icon: Crown,
+  },
+  {
+    title: "Optional infrastructure revenue",
+    detail: "Compute-sharing or rev-share integrations are isolated, risk-scored, and never required for core rewards.",
+    icon: Globe,
+  },
+];
 
-type Network = (typeof NETWORKS)[number];
+const treasuryAllocations = [
+  { label: "User rewards", value: 45, color: "bg-[hsl(var(--chart-1))]" },
+  { label: "Growth reinvestment", value: 20, color: "bg-[hsl(var(--chart-2))]" },
+  { label: "Operational reserve", value: 15, color: "bg-[hsl(var(--chart-3))]" },
+  { label: "Liquidity reserve", value: 10, color: "bg-[hsl(var(--chart-4))]" },
+  { label: "Security reserve", value: 5, color: "bg-[hsl(var(--chart-5))]" },
+  { label: "Emergency treasury", value: 5, color: "bg-primary" },
+];
 
-type Profile = {
-  id: string;
-  username: string | null;
-  role: string;
-  mining_power: number;
-  xp: number;
-  streak_days: number;
-  first_name: string | null;
-};
+const protectionLayers = [
+  "Email verification, device fingerprinting, 2FA, refresh-token rotation, session binding",
+  "Ad completion verification, click-spam throttling, replay protection, emulator and VPN detection",
+  "Server-authoritative scoring, anomaly-based anti-cheat, matchmaking integrity and bot detection",
+  "Delayed withdrawals, wallet reputation analysis, AML flags, velocity limits, multisig treasury approvals",
+];
 
-type RewardTask = {
-  id: string;
-  title: string;
-  description: string;
-  task_type: string;
-  reward_points: number;
-  estimated_revenue_cents: number;
-  cooldown_seconds: number;
-};
+const serviceStacks = [
+  {
+    name: "Experience layer",
+    items: ["React + Tailwind UI", "Mobile-first dashboards", "Task walls, clans, pass, treasury visibility"],
+  },
+  {
+    name: "Core platform",
+    items: ["Auth + RBAC", "Reward engine", "Treasury engine", "Fraud graph + risk scoring"],
+  },
+  {
+    name: "Data + AI",
+    items: ["Postgres ledger", "Redis cooldowns", "ClickHouse analytics", "Retention and anomaly models"],
+  },
+  {
+    name: "Payout + ops",
+    items: ["Off-chain balances", "Queued settlements", "Multisig withdrawal rail", "Grafana + Prometheus"],
+  },
+];
 
-type TreasurySnapshot = {
-  id: string;
-  verified_revenue_cents: number;
-  operational_costs_cents: number;
-  reserve_allocation_cents: number;
-  reward_pool_cents: number;
-  liquidity_reserve_cents: number;
-  emergency_reserve_cents: number;
-  payout_rate: number;
-  snapshot_date: string;
-};
+const apiGroups = [
+  {
+    title: "Auth + identity",
+    routes: ["POST /auth/register", "POST /auth/login", "POST /auth/verify-email", "POST /auth/refresh"],
+  },
+  {
+    title: "Engagement + rewards",
+    routes: ["GET /tasks/feed", "POST /ads/complete", "POST /games/submit-score", "GET /rewards/quote"],
+  },
+  {
+    title: "Treasury + payouts",
+    routes: ["GET /treasury/summary", "POST /withdrawals/request", "GET /withdrawals/history", "POST /wallets/link"],
+  },
+  {
+    title: "Admin + risk",
+    routes: ["GET /admin/alerts", "POST /admin/review/:caseId", "GET /admin/forecast", "POST /admin/sponsor-campaigns"],
+  },
+];
 
-type WalletRecord = {
-  id: string;
-  network: Network;
-  address: string;
-  is_verified: boolean;
-  label: string | null;
-};
+const schemaTables = [
+  "profiles, wallets, user_devices, roles",
+  "engagement_events, reward_tasks, referrals, challenge completions",
+  "reward_ledger, treasury_snapshots, reserve buckets, payout quotes",
+  "withdrawal_requests, aml_flags, fraud_cases, risk_scores, moderation actions",
+  "season_passes, cosmetics, marketplace_orders, sponsorship_campaigns, ai_recommendations",
+];
 
-type WithdrawalRecord = {
-  id: string;
-  network: Network;
-  amount_points: number;
-  status: string;
-  risk_score: number;
-  requested_at: string;
-};
+const aiSystems = [
+  {
+    title: "Revenue optimizer",
+    copy: "Chooses the best ad or partner path per user segment while respecting quality thresholds and frequency caps.",
+  },
+  {
+    title: "Sustainability forecaster",
+    copy: "Projects liquidity stress, reserve coverage, and safe payout ceilings before each reward epoch closes.",
+  },
+  {
+    title: "Fraud intelligence mesh",
+    copy: "Combines identity signals, graph analysis, behavior anomalies, and wallet risk to suppress abuse before payout.",
+  },
+  {
+    title: "Retention orchestrator",
+    copy: "Predicts churn and serves personalized quests, upgrade offers, clan nudges, and sponsored challenges.",
+  },
+];
 
-type LedgerEntry = {
-  id: string;
-  entry_type: string;
-  points_delta: number;
-  notes: string | null;
-  created_at: string;
-};
-
-type RiskFlag = {
-  id: string;
-  flag_type: string;
-  severity: string;
-  details: string;
-  created_at: string;
-};
-
-const currency = (cents: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
-
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
-
-const mapAuthError = (error: AuthError | Error) => {
-  if (error.message.toLowerCase().includes("email not confirmed")) {
-    return "Please verify your email before signing in.";
-  }
-  return error.message;
-};
+const operatingPrinciples = [
+  "Rewards are funded only from verified net revenue, treasury profits, and reserve-safe allocations.",
+  "No guaranteed returns, no fake mining, and no dependence on new user deposits.",
+  "All withdrawals pass delay windows, dynamic limits, and risk review before treasury settlement.",
+  "Emergency controls automatically throttle emissions when revenue quality or liquidity coverage falls.",
+];
 
 const Index = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [taskLoadingId, setTaskLoadingId] = useState<string | null>(null);
-  const [walletSaving, setWalletSaving] = useState(false);
-  const [withdrawSaving, setWithdrawSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [tasks, setTasks] = useState<RewardTask[]>([]);
-  const [treasury, setTreasury] = useState<TreasurySnapshot | null>(null);
-  const [wallets, setWallets] = useState<WalletRecord[]>([]);
-  const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
-  const [ledger, setLedger] = useState<LedgerEntry[]>([]);
-  const [riskFlags, setRiskFlags] = useState<RiskFlag[]>([]);
-
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
-  const [authForm, setAuthForm] = useState({
-    email: "",
-    password: "",
-    username: "",
-    firstName: "",
-  });
-  const [walletForm, setWalletForm] = useState({
-    network: "polygon" as Network,
-    address: "",
-    label: "",
-  });
-  const [withdrawForm, setWithdrawForm] = useState({
-    walletId: "",
-    amountPoints: "",
-  });
-  const [riskForm, setRiskForm] = useState({
-    flagType: "manual_review",
-    severity: "medium",
-    details: "",
-  });
-
-  const totalPoints = useMemo(() => ledger.reduce((sum, entry) => sum + entry.points_delta, 0), [ledger]);
-  const withdrawablePoints = Math.max(totalPoints, 0);
-  const reserveCoverage = treasury
-    ? Math.round(((treasury.liquidity_reserve_cents + treasury.emergency_reserve_cents) / Math.max(treasury.operational_costs_cents, 1)) * 30)
-    : 0;
-
-  const loadAuthenticatedData = async (userId: string) => {
-    const [
-      profileResult,
-      tasksResult,
-      treasuryResult,
-      walletsResult,
-      withdrawalsResult,
-      ledgerResult,
-      riskFlagsResult,
-    ] = await Promise.all([
-      supabase.from("profiles").select("id, username, role, mining_power, xp, streak_days, first_name").eq("id", userId).single(),
-      supabase
-        .from("reward_tasks")
-        .select("id, title, description, task_type, reward_points, estimated_revenue_cents, cooldown_seconds")
-        .eq("is_active", true)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("treasury_snapshots")
-        .select("id, verified_revenue_cents, operational_costs_cents, reserve_allocation_cents, reward_pool_cents, liquidity_reserve_cents, emergency_reserve_cents, payout_rate, snapshot_date")
-        .order("snapshot_date", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase.from("wallets").select("id, network, address, is_verified, label").order("created_at", { ascending: false }),
-      supabase
-        .from("withdrawal_requests")
-        .select("id, network, amount_points, status, risk_score, requested_at")
-        .order("requested_at", { ascending: false }),
-      supabase
-        .from("reward_ledger")
-        .select("id, entry_type, points_delta, notes, created_at")
-        .order("created_at", { ascending: false })
-        .limit(20),
-      supabase
-        .from("risk_flags")
-        .select("id, flag_type, severity, details, created_at")
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
-
-    const results = [profileResult, tasksResult, treasuryResult, walletsResult, withdrawalsResult, ledgerResult, riskFlagsResult];
-    const firstError = results.find((result) => result.error)?.error;
-
-    if (firstError) {
-      throw firstError;
-    }
-
-    setProfile(profileResult.data as Profile);
-    setTasks((tasksResult.data as RewardTask[]) ?? []);
-    setTreasury((treasuryResult.data as TreasurySnapshot | null) ?? null);
-    setWallets((walletsResult.data as WalletRecord[]) ?? []);
-    setWithdrawals((withdrawalsResult.data as WithdrawalRecord[]) ?? []);
-    setLedger((ledgerResult.data as LedgerEntry[]) ?? []);
-    setRiskFlags((riskFlagsResult.data as RiskFlag[]) ?? []);
-  };
-
-  const loadPublicData = async () => {
-    const [tasksResult, treasuryResult] = await Promise.all([
-      supabase
-        .from("reward_tasks")
-        .select("id, title, description, task_type, reward_points, estimated_revenue_cents, cooldown_seconds")
-        .eq("is_active", true)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("treasury_snapshots")
-        .select("id, verified_revenue_cents, operational_costs_cents, reserve_allocation_cents, reward_pool_cents, liquidity_reserve_cents, emergency_reserve_cents, payout_rate, snapshot_date")
-        .order("snapshot_date", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
-
-    if (tasksResult.error) throw tasksResult.error;
-    if (treasuryResult.error) throw treasuryResult.error;
-
-    setTasks((tasksResult.data as RewardTask[]) ?? []);
-    setTreasury((treasuryResult.data as TreasurySnapshot | null) ?? null);
-  };
-
-  useEffect(() => {
-    const initialize = async () => {
-      try {
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-        setSession(data.session);
-        if (data.session?.user) {
-          await loadAuthenticatedData(data.session.user.id);
-        } else {
-          await loadPublicData();
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load app data.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initialize();
-
-    const { data } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      setSession(nextSession);
-      setError(null);
-      if (nextSession?.user) {
-        await loadAuthenticatedData(nextSession.user.id);
-      } else {
-        setProfile(null);
-        setWallets([]);
-        setWithdrawals([]);
-        setLedger([]);
-        setRiskFlags([]);
-        await loadPublicData();
-      }
-    });
-
-    return () => data.subscription.unsubscribe();
-  }, []);
-
-  const handleAuthSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setAuthLoading(true);
-    setError(null);
-    setNotice(null);
-
-    try {
-      if (authMode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: authForm.email,
-          password: authForm.password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: {
-              username: authForm.username,
-              first_name: authForm.firstName,
-            },
-          },
-        });
-        if (signUpError) throw signUpError;
-        setNotice("Account created. Check your email to verify before signing in.");
-        setAuthMode("signin");
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: authForm.email,
-          password: authForm.password,
-        });
-        if (signInError) throw signInError;
-        setNotice("Signed in successfully.");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? mapAuthError(err) : "Authentication failed.");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleCompleteTask = async (task: RewardTask) => {
-    if (!session?.user) {
-      setError("Sign in to complete tasks and earn rewards.");
-      return;
-    }
-
-    setTaskLoadingId(task.id);
-    setError(null);
-    setNotice(null);
-
-    try {
-      const contributionScore = Number((task.reward_points * Math.max(treasury?.payout_rate ?? 1, 0.1)).toFixed(2));
-      const eventInsert = await supabase
-        .from("engagement_events")
-        .insert({
-          user_id: session.user.id,
-          task_id: task.id,
-          event_type: "reward_credited",
-          contribution_score: contributionScore,
-          revenue_cents: task.estimated_revenue_cents,
-          metadata: { client_verified: true, task_type: task.task_type },
-        })
-        .select("id")
-        .single();
-
-      if (eventInsert.error) throw eventInsert.error;
-
-      const ledgerInsert = await supabase.from("reward_ledger").insert({
-        user_id: session.user.id,
-        source_event_id: eventInsert.data.id,
-        entry_type: "earn",
-        points_delta: task.reward_points,
-        notes: `Completed ${task.title}`,
-      });
-
-      if (ledgerInsert.error) throw ledgerInsert.error;
-
-      const profileUpdate = await supabase
-        .from("profiles")
-        .update({
-          mining_power: Number((Number(profile?.mining_power ?? 0) + task.reward_points / 10).toFixed(2)),
-          xp: Number(profile?.xp ?? 0) + task.reward_points,
-          streak_days: task.task_type === "daily" ? Number(profile?.streak_days ?? 0) + 1 : Number(profile?.streak_days ?? 0),
-        })
-        .eq("id", session.user.id);
-
-      if (profileUpdate.error) throw profileUpdate.error;
-
-      await loadAuthenticatedData(session.user.id);
-      setNotice(`Reward credited for ${task.title}.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to complete task.");
-    } finally {
-      setTaskLoadingId(null);
-    }
-  };
-
-  const handleAddWallet = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!session?.user) return;
-
-    setWalletSaving(true);
-    setError(null);
-    setNotice(null);
-
-    try {
-      const { error: walletError } = await supabase.from("wallets").insert({
-        user_id: session.user.id,
-        network: walletForm.network,
-        address: walletForm.address.trim(),
-        label: walletForm.label.trim() || null,
-      });
-
-      if (walletError) throw walletError;
-      setWalletForm({ network: "polygon", address: "", label: "" });
-      await loadAuthenticatedData(session.user.id);
-      setNotice("Wallet linked successfully.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to link wallet.");
-    } finally {
-      setWalletSaving(false);
-    }
-  };
-
-  const handleWithdraw = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!session?.user) return;
-
-    const amount = Number(withdrawForm.amountPoints);
-    if (!withdrawForm.walletId || !Number.isFinite(amount) || amount < 100) {
-      setError("Choose a wallet and request at least 100 points.");
-      return;
-    }
-
-    if (amount > withdrawablePoints) {
-      setError("Withdrawal amount exceeds available balance.");
-      return;
-    }
-
-    const selectedWallet = wallets.find((wallet) => wallet.id === withdrawForm.walletId);
-    if (!selectedWallet) {
-      setError("Selected wallet was not found.");
-      return;
-    }
-
-    const riskScore = Math.min(95, Math.max(5, Math.round(amount / 25) + riskFlags.length * 8 + (selectedWallet.is_verified ? 0 : 12)));
-
-    setWithdrawSaving(true);
-    setError(null);
-    setNotice(null);
-
-    try {
-      const withdrawalInsert = await supabase.from("withdrawal_requests").insert({
-        user_id: session.user.id,
-        wallet_id: selectedWallet.id,
-        network: selectedWallet.network,
-        amount_points: amount,
-        risk_score: riskScore,
-        status: riskScore >= 70 ? "under_review" : "pending",
-      });
-      if (withdrawalInsert.error) throw withdrawalInsert.error;
-
-      const ledgerInsert = await supabase.from("reward_ledger").insert({
-        user_id: session.user.id,
-        entry_type: "withdrawal_hold",
-        points_delta: -amount,
-        notes: `Withdrawal request submitted to ${selectedWallet.network}`,
-      });
-      if (ledgerInsert.error) throw ledgerInsert.error;
-
-      setWithdrawForm({ walletId: "", amountPoints: "" });
-      await loadAuthenticatedData(session.user.id);
-      setNotice(riskScore >= 70 ? "Withdrawal submitted for review." : "Withdrawal queued successfully.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit withdrawal request.");
-    } finally {
-      setWithdrawSaving(false);
-    }
-  };
-
-  const handleRiskFlag = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!session?.user || !riskForm.details.trim()) return;
-
-    setError(null);
-    setNotice(null);
-
-    try {
-      const { error: riskError } = await supabase.from("risk_flags").insert({
-        user_id: session.user.id,
-        flag_type: riskForm.flagType,
-        severity: riskForm.severity,
-        details: riskForm.details.trim(),
-      });
-      if (riskError) throw riskError;
-
-      setRiskForm({ flagType: "manual_review", severity: "medium", details: "" });
-      await loadAuthenticatedData(session.user.id);
-      setNotice("Risk review signal submitted.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit risk signal.");
-    }
-  };
-
-  const handleSignOut = async () => {
-    setError(null);
-    setNotice(null);
-    const { error: signOutError } = await supabase.auth.signOut();
-    if (signOutError) {
-      setError(signOutError.message);
-    }
-  };
-
-  const heroStats = [
-    { label: "Verified revenue", value: treasury ? currency(treasury.verified_revenue_cents) : "—" },
-    { label: "Safe reward pool", value: treasury ? currency(treasury.reward_pool_cents) : "—" },
-    { label: "Reserve coverage", value: treasury ? `${reserveCoverage} days` : "—" },
-    { label: "Payout rate", value: treasury ? `${Math.round(treasury.payout_rate * 100)}%` : "—" },
-  ];
-
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pt-8">
-        <div className="flex flex-col gap-4 rounded-[2rem] border border-white/60 bg-white/80 p-4 shadow-[0_20px_80px_rgba(51,65,85,0.12)] backdrop-blur md:flex-row md:items-center md:justify-between md:p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-              <Coins className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80">NovaForge Loop</p>
-              <p className="text-sm text-muted-foreground">Revenue-backed engagement rewards platform</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className="rounded-full border-0 bg-emerald-100 px-4 py-1.5 text-emerald-700">Supabase live data</Badge>
-            <Badge className="rounded-full border-0 bg-violet-100 px-4 py-1.5 text-violet-700">Auth + ledger + treasury</Badge>
-            <Badge className="rounded-full border-0 bg-amber-100 px-4 py-1.5 text-amber-700">RLS protected</Badge>
-            {session?.user ? (
-              <Button variant="outline" onClick={handleSignOut} className="rounded-full border-primary/20 bg-white/90 px-4 text-primary hover:bg-primary/5">
-                <LogOut className="mr-2 h-4 w-4" /> Sign out
-              </Button>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-          <div className="space-y-6">
-            <Badge className="rounded-full border-0 bg-primary/10 px-4 py-1.5 text-primary">Real app foundation, not a mock shell</Badge>
-            <div className="space-y-4">
-              <h1 className="max-w-4xl text-4xl font-black tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-                Build growth through verified engagement and only pay out from real platform revenue.
-              </h1>
-              <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                Users can sign up, complete live reward tasks, accumulate off-chain balances in the ledger, link wallets, request delayed withdrawals, and monitor treasury-backed sustainability in one place.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {heroStats.map((stat) => (
-                <Card key={stat.label} className="rounded-[1.75rem] border-0 bg-slate-900 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
-                  <CardContent className="p-5">
-                    <p className="text-sm text-slate-300">{stat.label}</p>
-                    <p className="mt-2 text-2xl font-bold">{stat.value}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            {error ? (
-              <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-            ) : null}
-            {notice ? (
-              <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>
-            ) : null}
-          </div>
-
-          <Card className="rounded-[2rem] border-0 bg-[radial-gradient(circle_at_top_right,_rgba(124,58,237,0.22),_transparent_38%),linear-gradient(135deg,#1e1b4b,#312e81_45%,#0f172a)] text-white shadow-[0_30px_90px_rgba(49,46,129,0.32)]">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <Badge className="rounded-full border-0 bg-white/15 px-3 py-1 text-white">Access control</Badge>
-                <Sparkles className="h-5 w-5 text-violet-200" />
+      <section className="relative overflow-hidden">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 pb-12 pt-6 sm:px-6 lg:px-8 lg:pb-20 lg:pt-10">
+          <div className="flex flex-col gap-4 rounded-[2rem] border border-white/50 bg-white/70 p-4 shadow-[0_20px_80px_rgba(51,65,85,0.12)] backdrop-blur md:flex-row md:items-center md:justify-between md:p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
+                <Coins className="h-5 w-5" />
               </div>
-              <CardTitle className="text-2xl font-black">Sign up or sign in</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4" onSubmit={handleAuthSubmit}>
-                <div className="grid grid-cols-2 gap-2 rounded-[1rem] bg-white/10 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode("signup")}
-                    className={`rounded-[0.875rem] px-4 py-2 text-sm font-semibold transition ${
-                      authMode === "signup" ? "bg-white text-slate-900" : "text-white/80"
-                    }`}
-                  >
-                    Create account
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode("signin")}
-                    className={`rounded-[0.875rem] px-4 py-2 text-sm font-semibold transition ${
-                      authMode === "signin" ? "bg-white text-slate-900" : "text-white/80"
-                    }`}
-                  >
-                    Sign in
-                  </button>
-                </div>
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary/80">NovaForge Loop</p>
+                <p className="text-sm text-muted-foreground">Autonomous engagement rewards platform concept</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="rounded-full border-0 bg-emerald-100 px-4 py-1.5 text-emerald-700">Revenue-backed only</Badge>
+              <Badge className="rounded-full border-0 bg-violet-100 px-4 py-1.5 text-violet-700">AI-optimized</Badge>
+              <Badge className="rounded-full border-0 bg-amber-100 px-4 py-1.5 text-amber-700">Fraud hardened</Badge>
+            </div>
+          </div>
 
-                {authMode === "signup" ? (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-white">First name</Label>
-                      <Input
-                        id="firstName"
-                        value={authForm.firstName}
-                        onChange={(event) => setAuthForm((current) => ({ ...current, firstName: event.target.value }))}
-                        className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
-                        placeholder="Nova"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="username" className="text-white">Username</Label>
-                      <Input
-                        id="username"
-                        value={authForm.username}
-                        onChange={(event) => setAuthForm((current) => ({ ...current, username: event.target.value }))}
-                        className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
-                        placeholder="novaforge"
-                      />
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={authForm.email}
-                    onChange={(event) => setAuthForm((current) => ({ ...current, email: event.target.value }))}
-                    className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={authForm.password}
-                    onChange={(event) => setAuthForm((current) => ({ ...current, password: event.target.value }))}
-                    className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-                <Button disabled={authLoading} className="h-12 w-full rounded-full bg-white text-slate-900 hover:bg-white/90">
-                  {authLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-                  {authMode === "signup" ? "Create account" : "Access dashboard"}
-                </Button>
-                <p className="text-xs leading-5 text-white/70">
-                  Email verification is enforced by Supabase before password sign-in succeeds.
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+            <div className="space-y-6">
+              <Badge className="rounded-full border-0 bg-primary/10 px-4 py-1.5 text-primary">
+                Sustainable rewards, not speculative payouts
+              </Badge>
+              <div className="space-y-4">
+                <h1 className="max-w-4xl text-4xl font-black tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+                  A self-balancing reward ecosystem that only pays from verified revenue.
+                </h1>
+                <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                  This production-oriented product blueprint turns your idea into a compliant, high-retention platform concept with treasury controls, anti-fraud rails, delayed crypto settlement, and AI-assisted monetization.
                 </p>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-        <Tabs defaultValue="tasks" className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 rounded-[1.5rem] bg-slate-200/70 p-2 md:grid-cols-4">
-            <TabsTrigger value="tasks" className="rounded-[1rem] py-3 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-primary">Tasks</TabsTrigger>
-            <TabsTrigger value="treasury" className="rounded-[1rem] py-3 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-primary">Treasury</TabsTrigger>
-            <TabsTrigger value="wallet" className="rounded-[1rem] py-3 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-primary">Wallet</TabsTrigger>
-            <TabsTrigger value="trust" className="rounded-[1rem] py-3 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-primary">Trust center</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="tasks">
-            <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-              <div className="grid gap-4 md:grid-cols-2">
-                {tasks.map((task) => (
-                  <Card key={task.id} className="rounded-[1.75rem] border-0 bg-white/85 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                          {task.task_type === "ad" ? <Target className="h-5 w-5" /> : null}
-                          {task.task_type === "offerwall" ? <Gift className="h-5 w-5" /> : null}
-                          {task.task_type === "game" ? <Crown className="h-5 w-5" /> : null}
-                          {task.task_type === "daily" ? <Sparkles className="h-5 w-5" /> : null}
-                        </div>
-                        <Badge className="rounded-full border-0 bg-slate-100 px-3 py-1 text-slate-700">{task.task_type}</Badge>
-                      </div>
-                      <h3 className="mt-4 text-xl font-bold text-slate-900">{task.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{task.description}</p>
-                      <div className="mt-5 flex items-center justify-between text-sm text-slate-500">
-                        <span>Reward</span>
-                        <span className="font-semibold text-slate-900">+{task.reward_points} pts</span>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
-                        <span>Revenue estimate</span>
-                        <span className="font-semibold text-emerald-600">{currency(task.estimated_revenue_cents)}</span>
-                      </div>
-                      <Button
-                        disabled={taskLoadingId === task.id}
-                        onClick={() => handleCompleteTask(task)}
-                        className="mt-5 h-11 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                      >
-                        {taskLoadingId === task.id ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                        Complete task
-                      </Button>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button className="h-12 rounded-full bg-primary px-6 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90">
+                  Explore system blueprint
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button variant="outline" className="h-12 rounded-full border-primary/20 bg-white/80 px-6 text-base font-semibold text-primary hover:bg-primary/5">
+                  Review risk controls
+                </Button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Reward cap", value: "<= net revenue" },
+                  { label: "Treasury reserve floor", value: "35% protected" },
+                  { label: "Withdrawal model", value: "Delayed + risk scored" },
+                ].map((item) => (
+                  <Card key={item.label} className="rounded-[1.75rem] border-0 bg-slate-900 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
+                    <CardContent className="p-5">
+                      <p className="text-sm text-slate-300">{item.label}</p>
+                      <p className="mt-2 text-lg font-bold">{item.value}</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
+            </div>
 
+            <Card className="rounded-[2rem] border-0 bg-[radial-gradient(circle_at_top_right,_rgba(124,58,237,0.22),_transparent_38%),linear-gradient(135deg,#1e1b4b,#312e81_45%,#0f172a)] text-white shadow-[0_30px_90px_rgba(49,46,129,0.32)]">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <Badge className="rounded-full border-0 bg-white/15 px-3 py-1 text-white">Treasury logic</Badge>
+                  <Sparkles className="h-5 w-5 text-violet-200" />
+                </div>
+                <CardTitle className="text-2xl font-black">Daily balancing snapshot</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Verified revenue", value: "$48,240" },
+                    { label: "Safe reward pool", value: "$19,905" },
+                    { label: "Reserve coverage", value: "41 days" },
+                    { label: "Fraud risk blocked", value: "97.2%" },
+                  ].map((stat) => (
+                    <div key={stat.label} className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
+                      <p className="text-sm text-violet-100/80">{stat.label}</p>
+                      <p className="mt-2 text-2xl font-bold">{stat.value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-[1.5rem] border border-emerald-300/20 bg-emerald-400/10 p-5">
+                  <div className="flex items-center justify-between text-sm text-emerald-100">
+                    <span>Automatic emission throttle</span>
+                    <span>72%</span>
+                  </div>
+                  <Progress value={72} className="mt-3 h-3 rounded-full bg-white/10" />
+                  <p className="mt-3 text-sm leading-6 text-emerald-50/90">
+                    Payout multipliers are lowered during soft-demand hours and re-open when revenue quality recovers.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {monetizationStreams.map((stream) => {
+            const Icon = stream.icon;
+            return (
+              <Card key={stream.title} className="rounded-[1.75rem] border-0 bg-white/80 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+                <CardContent className="p-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-4 text-xl font-bold text-slate-900">{stream.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{stream.detail}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <Tabs defaultValue="architecture" className="space-y-6">
+          <TabsList className="grid h-auto w-full grid-cols-2 rounded-[1.5rem] bg-slate-200/70 p-2 md:grid-cols-4">
+            <TabsTrigger value="architecture" className="rounded-[1rem] py-3 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-primary">Architecture</TabsTrigger>
+            <TabsTrigger value="economics" className="rounded-[1rem] py-3 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-primary">Economics</TabsTrigger>
+            <TabsTrigger value="security" className="rounded-[1rem] py-3 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-primary">Security</TabsTrigger>
+            <TabsTrigger value="delivery" className="rounded-[1rem] py-3 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-primary">Delivery</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="architecture">
+            <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
               <Card className="rounded-[2rem] border-0 bg-slate-900 text-white shadow-[0_25px_80px_rgba(15,23,42,0.22)]">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3 text-2xl font-black">
-                    <Bot className="h-6 w-6 text-cyan-300" /> Reward engine
+                    <Gauge className="h-6 w-6 text-cyan-300" /> Full architecture
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-5">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                      <p className="text-sm text-slate-300">Available points</p>
-                      <p className="mt-2 text-2xl font-bold">{withdrawablePoints}</p>
+                <CardContent className="space-y-4">
+                  {serviceStacks.map((stack) => (
+                    <div key={stack.name} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
+                      <p className="text-base font-bold">{stack.name}</p>
+                      <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-300">
+                        {stack.items.map((item) => (
+                          <li key={item} className="flex gap-2">
+                            <span className="mt-2 h-1.5 w-1.5 rounded-full bg-cyan-300" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                      <p className="text-sm text-slate-300">Mining power</p>
-                      <p className="mt-2 text-2xl font-bold">{profile?.mining_power ?? 0}</p>
-                    </div>
-                    <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                      <p className="text-sm text-slate-300">XP</p>
-                      <p className="mt-2 text-2xl font-bold">{profile?.xp ?? 0}</p>
-                    </div>
-                    <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                      <p className="text-sm text-slate-300">Streak</p>
-                      <p className="mt-2 text-2xl font-bold">{profile?.streak_days ?? 0} days</p>
-                    </div>
-                  </div>
-                  <div className="rounded-[1.5rem] border border-emerald-300/20 bg-emerald-400/10 p-5">
-                    <div className="flex items-center justify-between text-sm text-emerald-100">
-                      <span>Payout throttle</span>
-                      <span>{treasury ? `${Math.round(treasury.payout_rate * 100)}%` : "—"}</span>
-                    </div>
-                    <Progress value={treasury ? Math.round(treasury.payout_rate * 100) : 0} className="mt-3 h-3 rounded-full bg-white/10" />
-                    <p className="mt-3 text-sm leading-6 text-emerald-50/90">
-                      Points are earned instantly but withdrawability stays aligned with revenue-backed liquidity.
-                    </p>
-                  </div>
-                  <Separator className="bg-white/10" />
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+                <CardHeader>
+                  <CardTitle className="text-2xl font-black text-slate-900">Database schema + API surface</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
                   <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">Recent ledger activity</p>
-                    <div className="mt-3 space-y-3">
-                      {ledger.slice(0, 5).map((entry) => (
-                        <div key={entry.id} className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-sm">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="font-semibold capitalize text-white">{entry.entry_type.replace("_", " ")}</span>
-                            <span className={entry.points_delta >= 0 ? "text-emerald-300" : "text-amber-300"}>
-                              {entry.points_delta >= 0 ? `+${entry.points_delta}` : entry.points_delta} pts
-                            </span>
-                          </div>
-                          <p className="mt-2 text-slate-300">{entry.notes ?? "Ledger entry"}</p>
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/70">Schema clusters</p>
+                    <div className="mt-4 space-y-3">
+                      {schemaTables.map((table) => (
+                        <div key={table} className="rounded-[1.25rem] bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                          {table}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/70">Core endpoints</p>
+                    <div className="mt-4 space-y-3">
+                      {apiGroups.map((group) => (
+                        <div key={group.title} className="rounded-[1.25rem] border border-slate-200 p-4">
+                          <p className="font-bold text-slate-900">{group.title}</p>
+                          <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                            {group.routes.map((route) => (
+                              <li key={route}>{route}</li>
+                            ))}
+                          </ul>
                         </div>
                       ))}
                     </div>
@@ -759,359 +323,182 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="treasury">
-            <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+          <TabsContent value="economics">
+            <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
               <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
-                    <TrendingUp className="h-6 w-6 text-emerald-500" /> Treasury system
+                    <TrendingUp className="h-6 w-6 text-emerald-500" /> Revenue flow + treasury system
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   <div className="rounded-[1.5rem] bg-emerald-50 p-5 text-sm leading-7 text-emerald-950">
-                    Available reward pool = verified revenue − ops costs − reserve allocation. Rewards are throttled by payout rate before users can convert points into withdrawals.
+                    Verified revenue enters a single treasury ledger, platform costs are deducted, reserve buckets are filled, and only then is a capped reward pool minted for the next payout epoch.
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {[
-                      { label: "Verified revenue", value: treasury ? currency(treasury.verified_revenue_cents) : "—" },
-                      { label: "Operational costs", value: treasury ? currency(treasury.operational_costs_cents) : "—" },
-                      { label: "Reserve allocation", value: treasury ? currency(treasury.reserve_allocation_cents) : "—" },
-                      { label: "Reward pool", value: treasury ? currency(treasury.reward_pool_cents) : "—" },
-                      { label: "Liquidity reserve", value: treasury ? currency(treasury.liquidity_reserve_cents) : "—" },
-                      { label: "Emergency reserve", value: treasury ? currency(treasury.emergency_reserve_cents) : "—" },
-                    ].map((item) => (
-                      <div key={item.label} className="rounded-[1.25rem] bg-slate-50 p-4">
-                        <p className="text-sm text-slate-500">{item.label}</p>
-                        <p className="mt-2 text-xl font-bold text-slate-900">{item.value}</p>
+                  <div className="space-y-3">
+                    {treasuryAllocations.map((allocation) => (
+                      <div key={allocation.label} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm font-medium text-slate-700">
+                          <span>{allocation.label}</span>
+                          <span>{allocation.value}%</span>
+                        </div>
+                        <div className="h-3 rounded-full bg-slate-100">
+                          <div className={`h-3 rounded-full ${allocation.color}`} style={{ width: `${allocation.value}%` }} />
+                        </div>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="rounded-[2rem] border-0 bg-[linear-gradient(180deg,#eef2ff,#ffffff)] shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+              <Card className="rounded-[2rem] border-0 bg-slate-900 text-white shadow-[0_25px_80px_rgba(15,23,42,0.22)]">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
-                    <Brain className="h-6 w-6 text-violet-500" /> Sustainability controls
+                  <CardTitle className="flex items-center gap-3 text-2xl font-black">
+                    <Zap className="h-6 w-6 text-amber-300" /> Reward balancing logic
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4 text-sm leading-7 text-slate-700">
-                  <div className="flex items-start gap-3 rounded-[1.25rem] bg-white p-4">
-                    <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-emerald-500" />
-                    <span>Public treasury visibility is read-only. User balances and withdrawal actions remain protected by user-scoped RLS.</span>
+                <CardContent className="space-y-5 text-sm leading-7 text-slate-300">
+                  <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                    Available Reward Pool = Verified Revenue − Ops Costs − Reserve Allocation
                   </div>
-                  <div className="flex items-start gap-3 rounded-[1.25rem] bg-white p-4">
-                    <Shield className="mt-1 h-5 w-5 shrink-0 text-primary" />
-                    <span>Reserve coverage is designed to absorb revenue swings before payout liquidity is affected.</span>
+                  <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                    User Reward Value = (User Contribution Score ÷ Total Contribution Score) × Available Reward Pool
                   </div>
-                  <div className="flex items-start gap-3 rounded-[1.25rem] bg-white p-4">
-                    <AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-amber-500" />
-                    <span>Withdrawal requests are delayed and risk scored. Larger requests are routed into under-review state.</span>
-                  </div>
+                  <ul className="space-y-3">
+                    <li>• Dynamic payout scaling reacts to liquidity coverage and fraud-adjusted revenue quality.</li>
+                    <li>• Daily reward multipliers shrink automatically when cash conversion lags or reserve floors are threatened.</li>
+                    <li>• Treasury protections can delay non-essential withdrawals to stop bank-run behavior.</li>
+                    <li>• Growth events expand only after reserve, security, and liquidity ratios clear minimum thresholds.</li>
+                  </ul>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="wallet">
-            <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
+          <TabsContent value="security">
+            <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+              <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+                    <Shield className="h-6 w-6 text-rose-500" /> Fraud prevention logic
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {protectionLayers.map((layer, index) => (
+                    <div key={layer} className="flex gap-4 rounded-[1.5rem] bg-slate-50 p-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold">
+                        {index + 1}
+                      </div>
+                      <p className="text-sm leading-6 text-slate-600">{layer}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
               <div className="space-y-5">
-                <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+                <Card className="rounded-[2rem] border-0 bg-[linear-gradient(180deg,#fff7ed,#ffffff)] shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
-                      <Wallet className="h-6 w-6 text-orange-500" /> Link wallet
+                      <Wallet className="h-6 w-6 text-orange-500" /> Crypto payout flow
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <form className="space-y-4" onSubmit={handleAddWallet}>
-                      <div className="space-y-2">
-                        <Label htmlFor="network">Network</Label>
-                        <Select value={walletForm.network} onValueChange={(value: Network) => setWalletForm((current) => ({ ...current, network: value }))}>
-                          <SelectTrigger id="network" className="h-11 rounded-2xl bg-slate-50">
-                            <SelectValue placeholder="Choose network" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {NETWORKS.map((network) => (
-                              <SelectItem key={network} value={network}>
-                                {network}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="walletAddress">Wallet address</Label>
-                        <Input
-                          id="walletAddress"
-                          value={walletForm.address}
-                          onChange={(event) => setWalletForm((current) => ({ ...current, address: event.target.value }))}
-                          className="h-11 rounded-2xl bg-slate-50"
-                          placeholder="Paste a destination wallet"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="walletLabel">Label</Label>
-                        <Input
-                          id="walletLabel"
-                          value={walletForm.label}
-                          onChange={(event) => setWalletForm((current) => ({ ...current, label: event.target.value }))}
-                          className="h-11 rounded-2xl bg-slate-50"
-                          placeholder="Main wallet"
-                        />
-                      </div>
-                      <Button disabled={!session?.user || walletSaving} className="h-11 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
-                        {walletSaving ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Save wallet
-                      </Button>
-                    </form>
+                  <CardContent className="space-y-3 text-sm leading-7 text-slate-600">
+                    <p>1. User earns off-chain points from verified engagement.</p>
+                    <p>2. Treasury converts eligible balances into a delayed withdrawal quote.</p>
+                    <p>3. Risk engine checks wallet duplication, AML flags, velocity, and reserve pressure.</p>
+                    <p>4. Approved batches settle through multisig-controlled rails on Polygon, Solana, Litecoin, or USDC networks.</p>
                   </CardContent>
                 </Card>
-
-                <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+                <Card className="rounded-[2rem] border-0 bg-[linear-gradient(180deg,#eef2ff,#ffffff)] shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
                   <CardHeader>
-                    <CardTitle className="text-xl font-black text-slate-900">Request withdrawal</CardTitle>
+                    <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+                      <Lock className="h-6 w-6 text-violet-500" /> Security implementation
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <form className="space-y-4" onSubmit={handleWithdraw}>
-                      <div className="space-y-2">
-                        <Label htmlFor="withdrawWallet">Destination wallet</Label>
-                        <Select value={withdrawForm.walletId} onValueChange={(value) => setWithdrawForm((current) => ({ ...current, walletId: value }))}>
-                          <SelectTrigger id="withdrawWallet" className="h-11 rounded-2xl bg-slate-50">
-                            <SelectValue placeholder="Select linked wallet" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {wallets.map((wallet) => (
-                              <SelectItem key={wallet.id} value={wallet.id}>
-                                {wallet.network} · {wallet.address.slice(0, 8)}...
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="amountPoints">Amount in points</Label>
-                        <Input
-                          id="amountPoints"
-                          type="number"
-                          min="100"
-                          value={withdrawForm.amountPoints}
-                          onChange={(event) => setWithdrawForm((current) => ({ ...current, amountPoints: event.target.value }))}
-                          className="h-11 rounded-2xl bg-slate-50"
-                          placeholder="100"
-                        />
-                      </div>
-                      <p className="text-sm text-slate-500">Available to request: {withdrawablePoints} points</p>
-                      <Button disabled={!session?.user || withdrawSaving} className="h-11 w-full rounded-full bg-slate-900 text-white hover:bg-slate-800">
-                        {withdrawSaving ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Queue withdrawal
-                      </Button>
-                    </form>
+                  <CardContent className="space-y-3 text-sm leading-7 text-slate-600">
+                    <p>JWT auth, refresh token rotation, encrypted secrets, immutable audits, RBAC, WAF, and DDoS mitigation are baseline controls.</p>
+                    <p>High-risk actions require stronger auth context, signed admin actions, and dual-control treasury approvals.</p>
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="delivery">
+            <div className="grid gap-5 lg:grid-cols-3">
+              <Card className="rounded-[2rem] border-0 bg-slate-900 text-white shadow-[0_25px_80px_rgba(15,23,42,0.22)] lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-2xl font-black">
+                    <Bot className="h-6 w-6 text-cyan-300" /> AI systems + backend services
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  {aiSystems.map((system) => (
+                    <div key={system.title} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                      <p className="text-lg font-bold text-white">{system.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-300">{system.copy}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
 
               <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
-                    <Zap className="h-6 w-6 text-primary" /> Wallet and payout activity
+                    <Radar className="h-6 w-6 text-pink-500" /> DevOps + monitoring
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/70">Linked wallets</p>
-                    <div className="mt-4 space-y-3">
-                      {wallets.length ? (
-                        wallets.map((wallet) => (
-                          <div key={wallet.id} className="rounded-[1.25rem] bg-slate-50 p-4">
-                            <div className="flex items-center justify-between gap-3">
-                              <div>
-                                <p className="font-semibold text-slate-900">{wallet.label || `${wallet.network} wallet`}</p>
-                                <p className="text-sm text-slate-500">{wallet.address}</p>
-                              </div>
-                              <Badge className={`rounded-full border-0 px-3 py-1 ${wallet.is_verified ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                                {wallet.is_verified ? "Verified" : "Pending check"}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-500">No wallets linked yet.</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/70">Withdrawal queue</p>
-                    <div className="mt-4 overflow-hidden rounded-[1.5rem] border border-slate-200">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Network</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Risk</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {withdrawals.length ? (
-                            withdrawals.map((withdrawal) => (
-                              <TableRow key={withdrawal.id}>
-                                <TableCell className="capitalize">{withdrawal.network}</TableCell>
-                                <TableCell>{withdrawal.amount_points} pts</TableCell>
-                                <TableCell className="capitalize">{withdrawal.status.replace("_", " ")}</TableCell>
-                                <TableCell>{withdrawal.risk_score}</TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={4} className="text-center text-slate-500">No withdrawal requests yet.</TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
+                <CardContent className="space-y-3 text-sm leading-7 text-slate-600">
+                  <p>Dockerized services run behind Cloudflare on autoscaling clusters, with CDN caching, isolated queues, and regional failover.</p>
+                  <p>Prometheus tracks latency, queue depth, and reserve ratios while Grafana, PostHog, and ClickHouse surface fraud and retention trends.</p>
+                  <p>Cost control comes from off-chain settlement batching, ad mediation optimization, cold-storage treasury segregation, and intelligent scaling windows.</p>
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="trust">
-            <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-              <Card className="rounded-[2rem] border-0 bg-slate-900 text-white shadow-[0_25px_80px_rgba(15,23,42,0.22)]">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-2xl font-black">
-                    <Shield className="h-6 w-6 text-cyan-300" /> Fraud prevention + review
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                      <p className="text-sm text-slate-300">Signals on file</p>
-                      <p className="mt-2 text-2xl font-bold">{riskFlags.length}</p>
-                    </div>
-                    <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                      <p className="text-sm text-slate-300">Highest severity</p>
-                      <p className="mt-2 text-2xl font-bold capitalize">{riskFlags[0]?.severity ?? "none"}</p>
-                    </div>
-                  </div>
-                  <form className="space-y-4 rounded-[1.5rem] border border-white/10 bg-white/5 p-5" onSubmit={handleRiskFlag}>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label className="text-white">Flag type</Label>
-                        <Select value={riskForm.flagType} onValueChange={(value) => setRiskForm((current) => ({ ...current, flagType: value }))}>
-                          <SelectTrigger className="h-11 rounded-2xl border-white/10 bg-white/10 text-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="manual_review">manual_review</SelectItem>
-                            <SelectItem value="velocity">velocity</SelectItem>
-                            <SelectItem value="behavior">behavior</SelectItem>
-                            <SelectItem value="wallet">wallet</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-white">Severity</Label>
-                        <Select value={riskForm.severity} onValueChange={(value) => setRiskForm((current) => ({ ...current, severity: value }))}>
-                          <SelectTrigger className="h-11 rounded-2xl border-white/10 bg-white/10 text-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">low</SelectItem>
-                            <SelectItem value="medium">medium</SelectItem>
-                            <SelectItem value="high">high</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-white">Details</Label>
-                      <Textarea
-                        value={riskForm.details}
-                        onChange={(event) => setRiskForm((current) => ({ ...current, details: event.target.value }))}
-                        className="min-h-[110px] rounded-[1.5rem] border-white/10 bg-white/10 text-white placeholder:text-white/50"
-                        placeholder="Describe a suspicious wallet, device pattern, or engagement anomaly."
-                      />
-                    </div>
-                    <Button disabled={!session?.user} className="rounded-full bg-white text-slate-900 hover:bg-white/90">
-                      Submit review signal
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-
-              <div className="space-y-5">
-                <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
-                      <Sparkles className="h-6 w-6 text-violet-500" /> Review feed
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {riskFlags.length ? (
-                      riskFlags.map((flag) => (
-                        <div key={flag.id} className="rounded-[1.25rem] bg-slate-50 p-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="font-semibold capitalize text-slate-900">{flag.flag_type.replace("_", " ")}</p>
-                            <Badge className={`rounded-full border-0 px-3 py-1 ${
-                              flag.severity === "high"
-                                ? "bg-rose-100 text-rose-700"
-                                : flag.severity === "medium"
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-emerald-100 text-emerald-700"
-                            }`}>
-                              {flag.severity}
-                            </Badge>
-                          </div>
-                          <p className="mt-2 text-sm leading-6 text-slate-600">{flag.details}</p>
-                          <p className="mt-2 text-xs text-slate-400">{formatDate(flag.created_at)}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-500">No review signals submitted yet.</div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button className="h-12 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
-                      <Crown className="mr-2 h-4 w-4" /> Production readiness notes
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="rounded-[2rem] border-0 bg-white p-0 sm:max-w-2xl">
-                    <div className="p-6 sm:p-8">
-                      <DialogHeader>
-                        <DialogTitle className="text-2xl font-black text-slate-900">What is real in this build</DialogTitle>
-                        <DialogDescription className="text-sm leading-6 text-slate-600">
-                          This app now uses real Supabase authentication, real tables, real RLS policies, real inserts for task completions, real wallet linking, real withdrawal requests, and real ledger persistence.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="mt-6 space-y-4 text-sm leading-7 text-slate-700">
-                        <p>Still intentionally not included: real ad network SDK callbacks, blockchain signing, multisig execution, AML vendor integrations, or external fraud intelligence APIs.</p>
-                        <p>Those require provider credentials and secure server-side rails, but the product foundation here is no longer a static mock.</p>
-                      </div>
-                      <DialogFooter className="mt-6">
-                        <Button className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90">Understood</Button>
-                      </DialogFooter>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
             </div>
           </TabsContent>
         </Tabs>
       </section>
 
-      {loading ? (
-        <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3 text-sm font-medium text-slate-700 shadow-lg">
-            <LoaderCircle className="h-4 w-4 animate-spin text-primary" /> Loading platform data
-          </div>
+      <section className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+        <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+          <Card className="rounded-[2rem] border-0 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+                <Trophy className="h-6 w-6 text-fuchsia-500" /> Frontend structure + retention engine
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm leading-7 text-slate-600">
+              <p>The user experience is organized around Home, Tasks, Mining Lab, Clans, Marketplace, Wallet, and Trust Center screens.</p>
+              <p>Retention loops include daily streaks, upgradeable virtual rigs, clans, seasonal ladders, prestige tracks, events, passes, and cosmetic drops.</p>
+              <p>Admin surfaces focus on treasury health, fraud queues, revenue cohorts, sponsor campaigns, and withdrawal reviews to minimize manual work.</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[2rem] border-0 bg-[linear-gradient(180deg,#f5f3ff,#ffffff)] shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-2xl font-black text-slate-900">
+                <Brain className="h-6 w-6 text-violet-500" /> Sustainability + risk analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm leading-7 text-slate-700">
+              <p>The model remains sustainable only if verified revenue quality, reserve coverage, fraud suppression, and withdrawal conversion stay within forecast ranges.</p>
+              <Separator />
+              <ul className="space-y-2">
+                {operatingPrinciples.map((principle) => (
+                  <li key={principle} className="flex gap-3">
+                    <Activity className="mt-1 h-4 w-4 shrink-0 text-primary" />
+                    <span>{principle}</span>
+                  </li>
+                ))}
+              </ul>
+              <Separator />
+              <p>
+                Key risks: partner revenue volatility, ad fraud pressure, payout regulation, app-store policy conflicts, wallet compliance requirements, and false-positive risk scoring. The design mitigates these with adaptive throttles, reserve locks, human review queues, and conservative withdrawal timing.
+              </p>
+            </CardContent>
+          </Card>
         </div>
-      ) : null}
+      </section>
     </main>
   );
 };
