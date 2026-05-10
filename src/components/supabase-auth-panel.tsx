@@ -1,44 +1,18 @@
 import { FormEvent, useState } from "react";
 import { LoaderCircle, LogOut, ShieldCheck, Sparkles } from "lucide-react";
+import type { Session } from "@supabase/supabase-js";
 
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showError, showSuccess } from "@/utils/toast";
 
-type AuthSession = {
-  access_token: string;
-  refresh_token: string;
-  user: {
-    id: string;
-    email?: string;
-  };
-};
-
 type SupabaseAuthPanelProps = {
-  session: AuthSession | null;
-  onAuthenticated: (session: AuthSession) => void;
+  session: Session | null;
+  onAuthenticated: (session: Session) => void;
   onSignedOut: () => void;
-};
-
-const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
-
-const STORAGE_KEY = "novaforge-rest-session";
-
-export const saveSession = (session: AuthSession) => {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-};
-
-export const readSession = () => {
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  return raw ? (JSON.parse(raw) as AuthSession) : null;
-};
-
-export const clearSession = () => {
-  window.localStorage.removeItem(STORAGE_KEY);
 };
 
 const authBenefits = [
@@ -62,79 +36,70 @@ const SupabaseAuthPanel = ({
     firstName: "",
   });
 
-  const headers = {
-    apikey: SUPABASE_PUBLISHABLE_KEY,
-    "Content-Type": "application/json",
-  };
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setMessage(null);
 
-    try {
-      if (mode === "signup") {
-        const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            email: form.email,
-            password: form.password,
-            data: {
-              username: form.username,
-              first_name: form.firstName,
-            },
-          }),
-        });
+    if (mode === "signup") {
+      const { error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            username: form.username,
+            first_name: form.firstName,
+          },
+        },
+      });
 
-        const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result.msg || result.error_description || "Unable to create account.");
-        }
-
-        const successMessage = "Account created. Please confirm your email, then sign in.";
-        setMessage(successMessage);
-        showSuccess(successMessage);
-        setMode("signin");
-      } else {
-        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            email: form.email,
-            password: form.password,
-          }),
-        });
-
-        const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result.msg || result.error_description || "Unable to sign in.");
-        }
-
-        const nextSession = {
-          access_token: result.access_token,
-          refresh_token: result.refresh_token,
-          user: result.user,
-        } satisfies AuthSession;
-
-        saveSession(nextSession);
-        onAuthenticated(nextSession);
-
-        const successMessage = "Signed in successfully.";
-        setMessage(successMessage);
-        showSuccess(successMessage);
+      if (error) {
+        const errorMessage = error.message || "Unable to create account.";
+        setMessage(errorMessage);
+        showError(errorMessage);
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Authentication failed.";
+
+      const successMessage = "Account created. Please confirm your email, then sign in.";
+      setMessage(successMessage);
+      showSuccess(successMessage);
+      setMode("signin");
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
+    });
+
+    if (error || !data.session) {
+      const errorMessage = error?.message || "Unable to sign in.";
       setMessage(errorMessage);
       showError(errorMessage);
-    } finally {
       setLoading(false);
+      return;
     }
+
+    onAuthenticated(data.session);
+
+    const successMessage = "Signed in successfully.";
+    setMessage(successMessage);
+    showSuccess(successMessage);
+    setLoading(false);
   };
 
-  const handleSignOut = () => {
-    clearSession();
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      const errorMessage = error.message || "Unable to sign out.";
+      setMessage(errorMessage);
+      showError(errorMessage);
+      return;
+    }
+
     onSignedOut();
     const successMessage = "Signed out.";
     setMessage(successMessage);

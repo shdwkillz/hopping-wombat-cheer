@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import {
   Activity,
   ArrowRight,
@@ -19,9 +20,10 @@ import {
   Zap,
 } from "lucide-react";
 
+import { supabase } from "@/integrations/supabase/client";
 import AccountStatusCard from "@/components/account-status-card";
 import SupabaseActionsPanel from "@/components/supabase-actions-panel";
-import SupabaseAuthPanel, { readSession } from "@/components/supabase-auth-panel";
+import SupabaseAuthPanel from "@/components/supabase-auth-panel";
 import SupabaseLivePreview from "@/components/supabase-live-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -148,8 +150,23 @@ const scrollToSection = (sectionId: string) => {
 };
 
 const Index = () => {
-  const [session, setSession] = useState(readSession());
+  const [session, setSession] = useState<Session | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setRefreshKey((current) => current + 1);
+    });
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -233,15 +250,15 @@ const Index = () => {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-        <AccountStatusCard session={session} />
+        <AccountStatusCard session={session as never} />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <SupabaseLivePreview session={session} refreshKey={refreshKey} />
+        <SupabaseLivePreview session={session as never} refreshKey={refreshKey} />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-        <SupabaseActionsPanel session={session} onUpdated={() => setRefreshKey((current) => current + 1)} />
+        <SupabaseActionsPanel session={session as never} onUpdated={() => setRefreshKey((current) => current + 1)} />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
