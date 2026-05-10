@@ -8,7 +8,9 @@ import AuthGuard from "@/components/auth-guard";
 import Index from "@/pages/Index";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
+import Privacy from "@/pages/Privacy";
 import Profile from "@/pages/Profile";
+import Terms from "@/pages/Terms";
 import Wallets from "@/pages/Wallets";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route
             path="/dashboard"
             element={

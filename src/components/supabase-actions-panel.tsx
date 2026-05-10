@@ -79,20 +79,30 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
       });
   }, [session, withdrawalForm.walletId]);
 
+  const normalizedWalletAddress = walletForm.address.trim();
+
   const walletAddressHint = useMemo(() => {
     if (!walletForm.address) return "Paste the payout address for this network.";
-    return walletForm.address.trim().length < 8 ? "Wallet address looks too short." : null;
-  }, [walletForm.address]);
+    if (normalizedWalletAddress.length < 8) return "Wallet address looks too short.";
+    if (normalizedWalletAddress.includes(" ")) return "Wallet address should not include spaces.";
+    return null;
+  }, [normalizedWalletAddress, walletForm.address]);
 
   const walletNetworkHint = useMemo(() => {
     if (!walletForm.network) return "Choose the payout network.";
     return walletForm.network.trim().length < 3 ? "Network name looks too short." : null;
   }, [walletForm.network]);
 
+  const walletLabelHint = useMemo(() => {
+    if (!walletForm.label) return "Optional name to help you recognize this wallet later.";
+    return walletForm.label.trim().length < 2 ? "Label should be at least 2 characters or left empty." : null;
+  }, [walletForm.label]);
+
   const withdrawalAmountHint = useMemo(() => {
     if (!withdrawalForm.amountPoints) return "Enter how many points you want to convert.";
     const amount = Number(withdrawalForm.amountPoints);
-    if (Number.isNaN(amount) || amount < 1) return "Enter a valid amount greater than 0.";
+    if (!Number.isInteger(amount) || amount < 1) return "Enter a whole number greater than 0.";
+    if (amount > 1000000) return "Amount is too large for a single request.";
     return null;
   }, [withdrawalForm.amountPoints]);
 
@@ -117,7 +127,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
   const handleWalletSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (walletAddressHint || walletNetworkHint) {
+    if (walletAddressHint || walletNetworkHint || (walletForm.label && walletLabelHint)) {
       showError("Please review your wallet details before saving.");
       return;
     }
@@ -129,9 +139,9 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
       headers: createJsonHeaders(),
       body: JSON.stringify({
         user_id: session.user.id,
-        network: walletForm.network,
-        address: walletForm.address,
-        label: walletForm.label || null,
+        network: walletForm.network.trim().toLowerCase(),
+        address: normalizedWalletAddress,
+        label: walletForm.label.trim() || null,
       }),
     });
 
@@ -146,7 +156,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
     const createdWallet = result[0] as WalletRecord | undefined;
 
     setWalletForm({
-      network: walletForm.network,
+      network: walletForm.network.trim().toLowerCase(),
       address: "",
       label: "",
     });
@@ -183,7 +193,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
       body: JSON.stringify({
         user_id: session.user.id,
         wallet_id: withdrawalForm.walletId,
-        network: withdrawalForm.network,
+        network: withdrawalForm.network.trim().toLowerCase(),
         amount_points: amount,
       }),
     });
@@ -265,7 +275,9 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
                 className="h-11 rounded-2xl"
                 placeholder="Main wallet"
               />
-              <p className="text-xs text-slate-500">Optional name to help you recognize this wallet later.</p>
+              <p className={`text-xs ${walletForm.label && walletLabelHint ? "text-amber-600" : "text-slate-500"}`}>
+                {walletLabelHint}
+              </p>
             </div>
             <Button disabled={walletLoading} className="h-12 w-full rounded-full">
               {walletLoading ? "Saving..." : "Link wallet"}
@@ -359,6 +371,7 @@ const SupabaseActionsPanel = ({ session, onUpdated }: SupabaseActionsPanelProps)
                 id="amountPoints"
                 type="number"
                 min="1"
+                step="1"
                 value={withdrawalForm.amountPoints}
                 onChange={(event) => setWithdrawalForm((current) => ({ ...current, amountPoints: event.target.value }))}
                 className="h-11 rounded-2xl border-white/15 bg-white/10 text-white placeholder:text-white/50"

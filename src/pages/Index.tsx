@@ -23,7 +23,9 @@ import type { AuthSession } from "@/lib/supabase";
 import { readSession, refreshSession, storeSession } from "@/lib/supabase";
 import AccountStatusCard from "@/components/account-status-card";
 import AppShell from "@/components/app-shell";
+import FooterLinks from "@/components/footer-links";
 import HomePersonalizedHero from "@/components/home-personalized-hero";
+import PublicLaunchBanner from "@/components/public-launch-banner";
 import RecentActivityPanel from "@/components/recent-activity-panel";
 import SessionSync from "@/components/session-sync";
 import SupabaseActionsPanel from "@/components/supabase-actions-panel";
@@ -184,7 +186,7 @@ const Index = () => {
       />
 
       <div className="space-y-6">
-        {session ? <HomePersonalizedHero session={session} /> : null}
+        {session ? <HomePersonalizedHero session={session} /> : <PublicLaunchBanner />}
 
         <section className="relative overflow-hidden">
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
@@ -504,6 +506,8 @@ const Index = () => {
             </Card>
           </div>
         </section>
+
+        <FooterLinks />
       </div>
     </AppShell>
   );
