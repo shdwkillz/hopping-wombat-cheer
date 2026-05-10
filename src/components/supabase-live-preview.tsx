@@ -57,16 +57,17 @@ type WithdrawalRecord = {
 
 type SupabaseLivePreviewProps = {
   session: AuthSession | null;
+  refreshKey: number;
 };
 
 const SUPABASE_URL = "https://gydhnsdhqbvsdjtxucgk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGhuc2RocWJ2c2RqdHh1Y2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTAzMzMsImV4cCI6MjA5Mzk2NjMzM30.47mfKFIyF6FDACryWIoyEBw5uAMJeqpWxodirr0f_B8";
 
 const currency = (cents: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 
-const SupabaseLivePreview = ({ session }: SupabaseLivePreviewProps) => {
+const SupabaseLivePreview = ({ session, refreshKey }: SupabaseLivePreviewProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [treasury, setTreasury] = useState<Treasury | null>(null);
   const [wallets, setWallets] = useState<WalletRecord[]>([]);
@@ -85,58 +86,56 @@ const SupabaseLivePreview = ({ session }: SupabaseLivePreviewProps) => {
     const load = async () => {
       setError(null);
 
-      try {
-        const publicRequests = await Promise.all([
+      const publicRequests = await Promise.all([
+        fetch(
+          `${SUPABASE_URL}/rest/v1/reward_tasks?select=id,title,description,task_type,reward_points,estimated_revenue_cents&is_active=eq.true&order=created_at.asc`,
+          { headers: authHeaders },
+        ),
+        fetch(
+          `${SUPABASE_URL}/rest/v1/treasury_snapshots?select=snapshot_date,verified_revenue_cents,reward_pool_cents,liquidity_reserve_cents,emergency_reserve_cents,payout_rate&order=snapshot_date.desc&limit=1`,
+          { headers: authHeaders },
+        ),
+      ]);
+
+      const tasksResult = await publicRequests[0].json();
+      const treasuryResult = await publicRequests[1].json();
+
+      if (!publicRequests[0].ok) throw new Error(tasksResult.message || "Unable to load reward tasks.");
+      if (!publicRequests[1].ok) throw new Error(treasuryResult.message || "Unable to load treasury.");
+
+      setTasks(tasksResult as Task[]);
+      setTreasury((treasuryResult[0] as Treasury) ?? null);
+
+      if (session) {
+        const privateRequests = await Promise.all([
           fetch(
-            `${SUPABASE_URL}/rest/v1/reward_tasks?select=id,title,description,task_type,reward_points,estimated_revenue_cents&is_active=eq.true&order=created_at.asc`,
+            `${SUPABASE_URL}/rest/v1/wallets?select=id,network,address,is_verified&user_id=eq.${session.user.id}&order=created_at.desc`,
             { headers: authHeaders },
           ),
           fetch(
-            `${SUPABASE_URL}/rest/v1/treasury_snapshots?select=snapshot_date,verified_revenue_cents,reward_pool_cents,liquidity_reserve_cents,emergency_reserve_cents,payout_rate&order=snapshot_date.desc&limit=1`,
+            `${SUPABASE_URL}/rest/v1/withdrawal_requests?select=id,network,amount_points,status,risk_score&user_id=eq.${session.user.id}&order=requested_at.desc`,
             { headers: authHeaders },
           ),
         ]);
 
-        const tasksResult = await publicRequests[0].json();
-        const treasuryResult = await publicRequests[1].json();
+        const walletsResult = await privateRequests[0].json();
+        const withdrawalsResult = await privateRequests[1].json();
 
-        if (!publicRequests[0].ok) throw new Error(tasksResult.message || "Unable to load reward tasks.");
-        if (!publicRequests[1].ok) throw new Error(treasuryResult.message || "Unable to load treasury.");
+        if (!privateRequests[0].ok) throw new Error(walletsResult.message || "Unable to load wallets.");
+        if (!privateRequests[1].ok) throw new Error(withdrawalsResult.message || "Unable to load withdrawals.");
 
-        setTasks(tasksResult as Task[]);
-        setTreasury((treasuryResult[0] as Treasury) ?? null);
-
-        if (session) {
-          const privateRequests = await Promise.all([
-            fetch(
-              `${SUPABASE_URL}/rest/v1/wallets?select=id,network,address,is_verified&user_id=eq.${session.user.id}&order=created_at.desc`,
-              { headers: authHeaders },
-            ),
-            fetch(
-              `${SUPABASE_URL}/rest/v1/withdrawal_requests?select=id,network,amount_points,status,risk_score&user_id=eq.${session.user.id}&order=requested_at.desc`,
-              { headers: authHeaders },
-            ),
-          ]);
-
-          const walletsResult = await privateRequests[0].json();
-          const withdrawalsResult = await privateRequests[1].json();
-
-          if (!privateRequests[0].ok) throw new Error(walletsResult.message || "Unable to load wallets.");
-          if (!privateRequests[1].ok) throw new Error(withdrawalsResult.message || "Unable to load withdrawals.");
-
-          setWallets(walletsResult as WalletRecord[]);
-          setWithdrawals(withdrawalsResult as WithdrawalRecord[]);
-        } else {
-          setWallets([]);
-          setWithdrawals([]);
-        }
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Unable to load live data.");
+        setWallets(walletsResult as WalletRecord[]);
+        setWithdrawals(withdrawalsResult as WithdrawalRecord[]);
+      } else {
+        setWallets([]);
+        setWithdrawals([]);
       }
     };
 
-    load();
-  }, [authHeaders, session]);
+    load().catch((loadError) => {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load live data.");
+    });
+  }, [authHeaders, refreshKey, session]);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
@@ -219,7 +218,8 @@ const SupabaseLivePreview = ({ session }: SupabaseLivePreviewProps) => {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold capitalize">{wallet.network}</p>
-                      <p className="text-xs text-slate-300">{wallet.address}</p>
+                      <p className="text-xs break-all text-slate-300">{wallet.address}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">ID: {wallet.id}</p>
                     </div>
                     {wallet.is_verified ? (
                       <CheckCircle2 className="h-5 w-5 text-emerald-300" />

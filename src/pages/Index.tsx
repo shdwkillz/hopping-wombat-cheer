@@ -20,6 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 
+import SupabaseActionsPanel from "@/components/supabase-actions-panel";
 import SupabaseAuthPanel, { readSession } from "@/components/supabase-auth-panel";
 import SupabaseLivePreview from "@/components/supabase-live-preview";
 import { Badge } from "@/components/ui/badge";
@@ -142,6 +143,7 @@ const operatingPrinciples = [
 
 const Index = () => {
   const [session, setSession] = useState(readSession());
+  const [refreshKey, setRefreshKey] = useState(0);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -174,7 +176,7 @@ const Index = () => {
                   A self-balancing reward ecosystem that only pays from verified revenue.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                  This production-oriented product blueprint now includes live REST-based Supabase auth and data reads without relying on the missing package.
+                  This production-oriented product blueprint now includes live REST-based Supabase auth, reads, and simple account actions without relying on the missing package.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -202,13 +204,27 @@ const Index = () => {
               </div>
             </div>
 
-            <SupabaseAuthPanel session={session} onAuthenticated={setSession} onSignedOut={() => setSession(null)} />
+            <SupabaseAuthPanel
+              session={session}
+              onAuthenticated={(nextSession) => {
+                setSession(nextSession);
+                setRefreshKey((current) => current + 1);
+              }}
+              onSignedOut={() => {
+                setSession(null);
+                setRefreshKey((current) => current + 1);
+              }}
+            />
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <SupabaseLivePreview session={session} />
+        <SupabaseLivePreview session={session} refreshKey={refreshKey} />
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+        <SupabaseActionsPanel session={session} onUpdated={() => setRefreshKey((current) => current + 1)} />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
