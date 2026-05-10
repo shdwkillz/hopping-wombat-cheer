@@ -38,7 +38,7 @@ const Privacy = () => {
               <div className="rounded-[1.5rem] bg-slate-50 p-5">
                 <h2 className="text-lg font-bold text-slate-900">Contact</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  For privacy-related questions, contact <a className="font-semibold text-primary" href="mailto:support@novaforgeloop.com">support@novaforgeloop.com</a>.
+                  For privacy-related questions, contact <a className="font-semibold text-primary" href="mailto:supportnovaforgeloop@pingmx.com">supportnovaforgeloop@pingmx.com</a>.
                 </p>
               </div>
             </div>

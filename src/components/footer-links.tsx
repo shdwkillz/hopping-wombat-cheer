@@ -29,7 +29,7 @@ const FooterLinks = () => {
               Terms
             </Link>
             <a
-              href="mailto:support@novaforgeloop.com"
+              href="mailto:supportnovaforgeloop@pingmx.com"
               className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
             >
               <Mail className="h-4 w-4 text-violet-600" />
@@ -57,7 +57,7 @@ const FooterLinks = () => {
               <p className="text-sm font-bold">Support</p>
             </div>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Questions or launch feedback can be sent to support@novaforgeloop.com.
+              Questions or launch feedback can be sent to supportnovaforgeloop@pingmx.com.
             </p>
           </div>
         </div>
